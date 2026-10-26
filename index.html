@@ -152,6 +152,14 @@ details.more .inner{padding-top:12px}
 .upmsg{font-size:14px;color:var(--sub);margin-top:12px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--accent-l);border-top-color:var(--accent-text);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
+.loading{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 6px}
+.loading svg{width:72px;height:72px;animation:dd-spin 1.4s cubic-bezier(.45,.05,.55,.95) infinite}
+.loading b{font-size:15px;font-weight:700;color:var(--sub)}
+.loading b i{font-style:normal;display:inline-block;animation:dd-dot 1.2s infinite}
+.loading b i:nth-child(2){animation-delay:.2s}.loading b i:nth-child(3){animation-delay:.4s}
+.loading span{font-size:13px;color:var(--faint)}
+@keyframes dd-spin{0%{transform:rotate(0) translateY(0)}50%{transform:rotate(180deg) translateY(-4px)}100%{transform:rotate(360deg) translateY(0)}}
+@keyframes dd-dot{0%,60%,100%{opacity:.2}30%{opacity:1}}
 .filled{box-shadow:inset 0 0 0 2px var(--green)!important}
 </style>
 </head>
@@ -588,6 +596,24 @@ $('#example').onclick=()=>{
     hits:[{name:'레전더리 카드',k:4,v:300000,k0:7},{name:'에픽 카드',k:17,v:40000,k0:29}]});
   toast('예시 값을 넣었어요. 시세는 가상의 값이에요');
 };
+/* ---------- 로딩 캐릭터 (데덴네) — 바꿀 땐 이 그림만 교체 ---------- */
+const LOADER_SVG=`<svg viewBox="0 0 100 100" aria-hidden="true">
+  <path d="M44 22 C40 10,30 6,22 4" stroke="#3A2A1A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M56 22 C60 10,70 6,78 4" stroke="#3A2A1A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="21" cy="4.5" r="4" fill="#FFD93B" stroke="#3A2A1A" stroke-width="1.5"/>
+  <circle cx="79" cy="4.5" r="4" fill="#FFD93B" stroke="#3A2A1A" stroke-width="1.5"/>
+  <circle cx="20" cy="34" r="19" fill="#F29B38"/><circle cx="20" cy="34" r="12" fill="#5B3A1E"/>
+  <circle cx="80" cy="34" r="19" fill="#F29B38"/><circle cx="80" cy="34" r="12" fill="#5B3A1E"/>
+  <ellipse cx="50" cy="58" rx="30" ry="27" fill="#F7A944"/>
+  <ellipse cx="50" cy="68" rx="18" ry="13" fill="#FFF3D6"/>
+  <circle cx="39" cy="55" r="4.2" fill="#2B1A0E"/><circle cx="61" cy="55" r="4.2" fill="#2B1A0E"/>
+  <circle cx="40.4" cy="53.6" r="1.4" fill="#fff"/><circle cx="62.4" cy="53.6" r="1.4" fill="#fff"/>
+  <ellipse cx="28" cy="66" rx="6" ry="4.5" fill="#F28A2E"/><ellipse cx="72" cy="66" rx="6" ry="4.5" fill="#F28A2E"/>
+  <path d="M46 66 Q50 70 54 66" stroke="#2B1A0E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M48 63 L50 65 L52 63 Z" fill="#2B1A0E"/>
+</svg>`;
+const loadingHtml=sub=>`<div class="loading">${LOADER_SVG}<b>로딩중<i>.</i><i>.</i><i>.</i></b><span>${sub}</span></div>`;
+
 /* ---------- 스크린샷 자동 채우기 ---------- */
 let upOn=false;
 fetch('/api/extract').then(r=>r.json()).then(j=>{upOn=!!j.enabled;upState()}).catch(()=>upState());
@@ -621,7 +647,7 @@ async function readLink(){
   const url=$('#upUrl').value.trim();
   if(!/^https?:\/\//.test(url)){toast('https:// 로 시작하는 링크를 넣어 주세요');return}
   $('#thumbs').innerHTML='';
-  upMsg('<span class="spin"></span>페이지를 읽고 있어요… (10~20초 걸려요)',true);
+  upMsg(loadingHtml('페이지를 읽고 있어요 · 10~20초 걸려요'),true);
   try{
     const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url})});
     const j=await r.json();
@@ -636,7 +662,7 @@ async function handleFiles(all){
   if(all.length>3)toast('처음 3장만 읽을게요');
   let ims;try{ims=await Promise.all(files.map(shrink))}catch(err){upMsg(err.message);return}
   $('#thumbs').innerHTML=ims.map(i=>`<img src="${i.preview}" alt="">`).join('');
-  upMsg('<span class="spin"></span>화면을 읽고 있어요… (10초 정도 걸려요)',true);
+  upMsg(loadingHtml('화면을 읽고 있어요 · 10초 정도 걸려요'),true);
   try{
     const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({images:ims.map(({type,data})=>({type,data}))})});
     const j=await r.json();
