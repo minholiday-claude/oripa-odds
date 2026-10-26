@@ -137,7 +137,7 @@ details.more .inner{padding-top:12px}
 .thumbs img{width:64px;height:64px;object-fit:cover;border-radius:12px;background:var(--input)}
 .linkrow{display:flex;gap:8px;margin-top:14px}
 .linkrow .in{height:48px;font-size:15px;font-weight:500}
-.linkrow .ghost{height:48px;padding:0 18px;background:var(--accent-ink);color:var(--accent);font-weight:700}
+.linkrow .ghost{flex:0 0 auto;white-space:nowrap;height:48px;padding:0 18px;background:var(--accent-ink);color:var(--accent);font-weight:700}
 .upmsg{font-size:14px;color:var(--sub);margin-top:12px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--accent-l);border-top-color:var(--accent-text);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -449,14 +449,14 @@ function render(r){
   if(r.waitWhy==='up')desc+=' 처음보다 좋아지는 중이에요.';
   $('#vDesc').textContent=desc;
   $('#kRtp').textContent=r.priced?pct(r.rtp,1):'-';
-  $('#kWinLbl').textContent=`승률 (${won(r.budget)} 기준)`;
+  $('#kWinLbl').textContent=`승률 (${r.n.toLocaleString()}번 · ${won(r.cost)})`;
   $('#kWin').textContent=r.priced?pct(r.win,1):'-';
 
   $('#probList').innerHTML=r.single.map(h=>`<li><span>${esc(h.name)} <small style="color:var(--faint)">${h.k.toLocaleString()}개</small></span><b>${pct(h.p)}<br><small style="color:var(--faint);font-weight:600">${h.p>0?'약 '+Math.round(1/h.p).toLocaleString()+'번에 1번':'없음'}</small></b></li>`).join('')
     +`<li><span>히트 아무거나</span><b>${pct(r.K/s.N)}</b></li>`
     +(r.priced?`<li><span>한 번의 기대값</span><b>${won(r.ev)} <small style="color:var(--faint)">/ 가격 ${won(s.price)}</small></b></li>`:'');
 
-  $('#bTitle').textContent=`${won(r.cost)}으로 ${r.n.toLocaleString()}번 뽑으면`;
+  $('#bTitle').textContent=`${won(r.cost)}으로 ${r.n.toLocaleString()}번 뽑으면`+(r.budget<s.price?' (예산이 1번 가격보다 적어 1번 기준)':'');
   $('#bHint').textContent=r.priced?'10,000번 가상으로 뽑아 본 결과예요.':'시세를 넣으면 승률과 손실 범위도 보여 드려요.';
   let bl=`<li><span>히트 1장 이상 나올 확률</span><b>${pct(r.anyHitN,1)}</b></li>`;
   if(r.priced)bl+=`<li><span>본전 이상 (승률)</span><b>${pct(r.win,1)}</b></li>
@@ -484,7 +484,8 @@ function render(r){
 
   $('#trendCard').classList.toggle('hide',!r.trend);
   if(r.trend){const t=r.trend;
-    $('#trendList').innerHTML=`<li><span>히트 확률, 처음 대비</span><b style="color:${t.ratio>=1?'var(--green)':'var(--red)'}">${t.ratio.toFixed(2)}배 ${t.ratio>=1?'좋아짐':'나빠짐'}</b></li>`
+    const same=Math.abs(t.ratio-1)<0.005;
+    $('#trendList').innerHTML=`<li><span>히트 확률, 처음 대비</span><b style="color:${same?'var(--sub)':t.ratio>1?'var(--green)':'var(--red)'}">${same?'변화 없음':t.ratio.toFixed(2)+'배 '+(t.ratio>1?'좋아짐':'나빠짐')}</b></li>`
     +(t.topRatio!=null?`<li><span>${esc(s.hits[0].name||'첫 히트')} 확률, 처음 대비</span><b style="color:${t.topRatio>=1?'var(--green)':'var(--red)'}">${t.topRatio.toFixed(2)}배</b></li>`:'')
     +`<li><span>지금까지 나간 히트</span><b>${t.actOut.toLocaleString()}개 <small style="color:var(--faint)">/ 기대 ${t.expOut.toFixed(1)}개</small></b></li>`;}
 
