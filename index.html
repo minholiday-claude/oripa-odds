@@ -123,6 +123,17 @@ details.more .inner{padding-top:12px}
   font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:9;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .hide{display:none!important}
+.up{display:flex;align-items:center;gap:14px;cursor:pointer}
+.up .ic{width:48px;height:48px;border-radius:14px;background:var(--blue-l);color:var(--blue);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
+.up b{display:block;font-size:17px}
+.up span{font-size:14px;color:var(--faint)}
+.up.off{opacity:.55;cursor:default}
+.thumbs{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.thumbs img{width:64px;height:64px;object-fit:cover;border-radius:12px;background:var(--input)}
+.upmsg{font-size:14px;color:var(--sub);margin-top:12px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--blue-l);border-top-color:var(--blue);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.filled{box-shadow:inset 0 0 0 2px var(--green)!important}
 </style>
 </head>
 <body>
@@ -137,6 +148,16 @@ details.more .inner{padding-top:12px}
   <div class="hero">
     <h1>이 오리파,<br>지금 사도 될까요?</h1>
     <p>사이트나 앱 화면에 보이는 숫자를 넣으면 확률로 알려 드려요.</p>
+  </div>
+
+  <div class="card" id="upCard">
+    <label class="up" id="upLbl">
+      <div class="ic">📷</div>
+      <div><b>스크린샷으로 자동 채우기</b><span id="upSub">오리파 화면 캡처를 올리면 숫자를 읽어 칸을 채워요 (최대 3장)</span></div>
+      <input type="file" id="upFile" accept="image/*" multiple hidden>
+    </label>
+    <div class="thumbs" id="thumbs"></div>
+    <p class="upmsg hide" id="upMsg"></p>
   </div>
 
   <div class="card">
@@ -521,6 +542,53 @@ $('#example').onclick=()=>{
     hits:[{name:'레전더리 카드',k:4,v:300000,k0:7},{name:'에픽 카드',k:17,v:40000,k0:29}]});
   toast('예시 값을 넣었어요. 시세는 가상의 값이에요');
 };
+/* ---------- 스크린샷 자동 채우기 ---------- */
+let upOn=false;
+fetch('/api/extract').then(r=>r.json()).then(j=>{upOn=!!j.enabled;upState()}).catch(()=>upState());
+function upState(){
+  $('#upLbl').classList.toggle('off',!upOn);$('#upFile').disabled=!upOn;
+  $('#upSub').textContent=upOn?'오리파 화면 캡처를 올리면 숫자를 읽어 칸을 채워요 (최대 3장)':'준비 중이에요. 지금은 아래 칸에 직접 넣어 주세요.';
+}
+function shrink(file){return new Promise((ok,no)=>{
+  const img=new Image(),u=URL.createObjectURL(file);
+  img.onload=()=>{const M=1568,k=Math.min(1,M/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);
+    const d=c.toDataURL('image/jpeg',0.85);ok({type:'image/jpeg',data:d.split(',')[1],preview:d})};
+  img.onerror=()=>no(new Error('이미지를 열 수 없어요'));img.src=u;})}
+function upMsg(t,html){const m=$('#upMsg');m.classList.remove('hide');if(html)m.innerHTML=t;else m.textContent=t}
+$('#upFile').onchange=async e=>{
+  const files=[...e.target.files].slice(0,3);e.target.value='';if(!files.length)return;
+  let ims;try{ims=await Promise.all(files.map(shrink))}catch(err){upMsg(err.message);return}
+  $('#thumbs').innerHTML=ims.map(i=>`<img src="${i.preview}" alt="">`).join('');
+  upMsg('<span class="spin"></span>화면을 읽고 있어요… (10초 정도 걸려요)',true);
+  try{
+    const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({images:ims.map(({type,data})=>({type,data}))})});
+    const j=await r.json();
+    if(!r.ok){upMsg(j.error||'읽지 못했어요. 직접 넣어 주세요.');return}
+    applyFields(j.fields);
+  }catch(err){upMsg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.')}
+};
+function applyFields(f){
+  const s=readState(),got=[],miss=[];
+  const take=(key,val,label)=>{if(val!=null&&val!==''&&!(typeof val==='number'&&!isFinite(val))){s[key]=val;got.push(label)}else miss.push(label)};
+  take('site',f.site,'사이트');take('pack',f.pack,'이름');take('price',f.price,'가격');take('N',f.remaining,'남은 횟수');
+  if(f.total!=null)s.N0=f.total;
+  if(f.fixed_probability===true)s.mode='fixed';else if(f.fixed_probability===false)s.mode='hyper';
+  const old=Object.fromEntries(s.hits.map(h=>[h.name,h.v]));
+  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>({name:h.name,k:h.remaining??NaN,k0:h.initial??NaN,v:old[h.name]??NaN}));got.push('히트 '+f.hits.length+'개')}
+  else miss.push('히트 목록');
+  writeState(s);
+  ['#site','#pack','#price','#remain'].forEach((id,i)=>{if([f.site,f.pack,f.price,f.remaining][i]!=null)$(id).classList.add('filled')});
+  $$('.hit .hn,.hit .hk').forEach(el=>{if(el.value)el.classList.add('filled')});
+  setTimeout(()=>$$('.filled').forEach(el=>el.classList.remove('filled')),6000);
+  let t=`채운 항목: ${got.join(', ')||'없음'}.`;
+  if(miss.length)t+=` 못 찾은 항목: ${miss.join(', ')}.`;
+  t+=' 숫자가 화면과 같은지 꼭 확인하고, 히트별 시세는 파빌리온에서 넣어 주세요.';
+  if(f.last_one)t+=` 라스트원: ${f.last_one}.`;if(f.bonus)t+=` 보너스: ${f.bonus}.`;
+  upMsg(t);toast('자동으로 채웠어요. 숫자를 확인해 주세요');
+}
+
 (function init(){
   let s=null;
   if(location.hash.length>2){try{s=JSON.parse(decodeURIComponent(location.hash.slice(1)))}catch(e){}}
