@@ -33,7 +33,7 @@ const TOOL = {
       price: { type: ['number', 'null'], description: '한 번(1회/1자리/1팩) 참여 가격, 원 단위 숫자' },
       remaining: { type: ['number', 'null'], description: '화면에 "남은 수"가 직접 적혀 있을 때만. 계산하지 말 것' },
       opened: { type: ['number', 'null'], description: '개봉(판매·참여)된 수가 적혀 있으면 그 숫자' },
-      total: { type: ['number', 'null'], description: '처음 전체 횟수(자리 수)' },
+      total: { type: ['number', 'null'], description: '처음 전체 횟수(자리 수). "개봉 X / Y" 표기의 Y. 제목의 "단 N구" 같은 홍보 문구 숫자는 쓰지 말 것' },
       fixed_probability: { type: ['boolean', 'null'], description: '뽑을 때마다 확률이 늘 같은 방식(무한 뽑기)이라고 명시되면 true. 남은 수량·남은 자리가 표시되고 줄어드는 방식이면 false. "참여 순서와 무관하게 확률 동일" 같은 문구는 true의 근거가 아님' },
       hits: {
         type: 'array',
@@ -159,7 +159,7 @@ async function askClaude(content) {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: MODEL, max_tokens: 3000, tools: [TOOL], tool_choice: { type: 'tool', name: 'oripa_fields' },
+      model: MODEL, max_tokens: 8000, tools: [TOOL], tool_choice: { type: 'tool', name: 'oripa_fields' },
       messages: [{ role: 'user', content }],
     }),
   });
@@ -171,10 +171,16 @@ async function askClaude(content) {
 
 // 산수는 서버에서 (모델 계산 실수 방지)
 function finish(f) {
+  // 라스트원·빈 항목은 히트에서 먼저 제외
+  if (Array.isArray(f.hits)) f.hits = f.hits.filter(h => h && h.name && !/라스트\s*원|last\s*one/i.test(h.name) && (h.remaining != null || h.initial != null));
+  // 등급별 처음 수 합이 전체보다 크면 전체를 바로잡음 (전체는 최소한 그 합 이상)
+  if (Array.isArray(f.hits) && f.hits.length && f.hits.every(h => isFinite(h.initial))) {
+    const sumInit = f.hits.reduce((a, h) => a + h.initial, 0);
+    if (!isFinite(f.total) || f.total < sumInit) f.total = sumInit;
+  }
   // 전체와 개봉 수가 있으면 남은 횟수는 항상 직접 계산
   if (isFinite(f.total) && isFinite(f.opened) && f.total >= f.opened) f.remaining = f.total - f.opened;
   if (Array.isArray(f.hits)) {
-    f.hits = f.hits.filter(h => h && h.name && !/라스트\s*원|last\s*one/i.test(h.name) && (h.remaining != null || h.initial != null));
     // 등급별 남은 수가 처음보다 줄어 있으면 '남은 수가 줄어드는' 방식
     if (f.hits.some(h => isFinite(h.remaining) && isFinite(h.initial) && h.remaining < h.initial)) f.fixed_probability = false;
     f.hits = f.hits.map(h => {
