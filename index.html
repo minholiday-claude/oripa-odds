@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>오리파이기기 — 오리파 승률 계산기</title>
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
 <meta name="description" content="오리파 화면의 숫자를 넣으면 지금 사도 되는지 확률로 알려 드려요.">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -32,7 +33,7 @@ button,input,select{font:inherit;color:inherit}
 header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px)}
 header .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
 .logo{font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;cursor:pointer}
-.logo i{width:24px;height:24px;border-radius:8px;background:var(--accent-ink);display:inline-grid;place-items:center;color:var(--accent);font-style:normal;font-size:13px}
+.logo img{width:30px;height:30px;display:block}
 .tabs{display:flex;gap:4px;background:var(--input);border-radius:12px;padding:4px}
 .tabs button{border:0;background:none;padding:6px 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--faint);cursor:pointer}
 .tabs button.on{background:var(--accent-l);color:var(--accent-text)}
@@ -199,7 +200,7 @@ details.more .inner{padding-top:12px}
 </head>
 <body>
 <header><div class="wrap">
-  <a class="logo" href="./" id="home" aria-label="오리파이기기 처음으로"><i>%</i>오리파이기기</a>
+  <a class="logo" href="./" id="home" aria-label="오리파이기기 처음으로"><img src="img/logo.svg" alt="">오리파이기기</a>
   <div class="tabs"><button class="on" data-tab="calc">계산</button><button data-tab="saved">비교 <span id="savedN"></span></button></div>
 </div></header>
 
@@ -217,7 +218,7 @@ details.more .inner{padding-top:12px}
       <div><b>스크린샷으로 자동 채우기</b><span id="upSub">끌어오기 · 눌러서 첨부 · 붙여넣기 (최대 3장)</span></div>
       <input type="file" id="upFile" accept="image/*" multiple hidden>
     </label>
-    <div class="linkrow"><input class="in" id="upUrl" type="url" inputmode="url" placeholder="또는 오리파 링크를 붙여넣으세요 (https://...)"><button class="ghost" id="upGo">읽기</button></div>
+    <div class="linkrow"><input class="in" id="upUrl" type="url" inputmode="url" placeholder="오리파 링크를 붙여넣으세요"><button class="ghost" id="upGo">읽기</button></div>
     <div class="thumbs" id="thumbs"></div>
     <p class="upmsg hide" id="upMsg"></p>
   </div>
