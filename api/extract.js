@@ -173,7 +173,9 @@ function finish(f) {
       const its = (h.items || []).filter(i => isFinite(i.price) && i.price >= 0);
       const q = its.reduce((a, i) => a + (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const sum = its.reduce((a, i) => a + i.price * (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
-      const out = { name: h.name, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length };
+      const list = (h.items || []).filter(i => i && i.name).slice(0, 40)
+        .map(i => ({ name: String(i.name).trim(), price: isFinite(i.price) ? i.price : null, qty: isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }));
+      const out = { name: h.name, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
       if (q > 0) out.value = Math.round(sum / q);   // 등급 안 상품 가격의 평균 (사이트 표기 가격)
       return out;
     });

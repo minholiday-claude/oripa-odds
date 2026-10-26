@@ -68,6 +68,17 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .kinds{display:flex;gap:6px;margin-bottom:8px}
 .kinds button{border:0;height:30px;padding:0 12px;border-radius:99px;background:var(--card);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
 .kinds button.on{background:var(--accent-ink);color:var(--accent)}
+details.items{margin-top:10px;background:var(--card);border-radius:12px;padding:4px 12px}
+details.items summary{list-style:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--sub);padding:8px 0;display:flex;justify-content:space-between}
+details.items summary::after{content:"펼치기";color:var(--faint);font-weight:600}
+details.items[open] summary::after{content:"접기"}
+.item{display:grid;grid-template-columns:1fr 124px auto;gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.item .nm{font-size:13px;line-height:1.35;word-break:keep-all}
+.item .nm small{color:var(--faint);font-weight:600}
+.item .unit .in{height:36px;font-size:13px;padding:0 26px 0 10px;border-radius:10px;background:var(--input)}
+.item .unit em{right:10px;font-size:12px}
+.item .pav{height:36px;padding:0 10px;font-size:12px}
+.items .note{font-size:12px;color:var(--faint);padding:8px 0 10px}
 .add{width:100%;height:48px;border:1.5px dashed var(--line);background:none;border-radius:14px;color:var(--accent-text);font-weight:700;cursor:pointer}
 details.more{margin-top:4px}
 details.more summary{list-style:none;cursor:pointer;font-weight:700;color:var(--sub);display:flex;justify-content:space-between;align-items:center;padding:6px 0}
@@ -302,6 +313,14 @@ const KINDS={
   pack:{label:'팩',namePh:'팩 이름과 수량 (예: 30주년 팩 3팩)',valPh:'받는 팩 전체 시세',linkLabel:'팩 시세 검색 ↗',url:q=>q?'https://search.shopping.naver.com/search/all?query='+encodeURIComponent(q):''},
   etc:{label:'기타',namePh:'포인트, 쿠폰, 굿즈 등',valPh:'원으로 환산한 가치',linkLabel:'시세 검색 없음',url:q=>''}
 };
+const cleanQ=n=>String(n).replace(/\([^)]*(판|팩)[^)]*\)/g,'').replace(/\s+/g,' ').trim();
+const guessKind=n=>/박스|box/i.test(n)?'box':/팩|pack/i.test(n)?'pack':'card';
+function itemRow(it){
+  const k=guessKind(it.name),o=KINDS[k];
+  return `<div class="item"><div class="nm">${esc(it.name)} <small>× ${it.qty||1}</small></div>
+    <div class="unit"><input class="in ip" inputmode="numeric" placeholder="가격" value="${isFinite(it.price)&&it.price!=null?Number(it.price).toLocaleString('ko-KR'):''}" data-q="${it.qty||1}"><em>원</em></div>
+    <a class="pav" target="_blank" rel="noopener" href="${o.url(cleanQ(it.name))}">${k==='card'?'파빌리온 ↗':'시세 ↗'}</a></div>`;
+}
 function hitRow(h={}){
   const d=document.createElement('div');d.className='hit';
   const kind=h.kind||'card';
@@ -316,10 +335,14 @@ function hitRow(h={}){
         <div class="unit"><input class="in hk0" inputmode="numeric" placeholder="처음 수(선택)" value="${h.k0??''}"><em>개</em></div>
       </div>
       <a class="pav" target="_blank" rel="noopener"></a>
-    </div>`;
-  d.dataset.kind=kind;
+    </div>${h.items&&h.items.length?`<details class="items"><summary>이 등급의 상품 ${h.items.length}종</summary>
+      ${h.items.map(itemRow).join('')}<p class="note">가격은 사이트가 적은 값이에요. 파빌리온에서 확인하고 고치면 위 시세(등급 평균)가 다시 계산돼요.</p></details>`:''}`;
+  d.dataset.kind=kind;d._items=h.items&&h.items.length?h.items.map(i=>({...i})):null;
+  if(d._items){const recalc=()=>{let q=0,sum=0;d.querySelectorAll('.ip').forEach((el,i)=>{const p=num(el.value),qq=d._items[i].qty||1;d._items[i].price=isFinite(p)?p:null;if(isFinite(p)){q+=qq;sum+=p*qq}});
+      if(q)d.querySelector('.hv').value=Math.round(sum/q).toLocaleString('ko-KR')};
+    d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});}
   const nameI=d.querySelector('.hn'),a=d.querySelector('.pav'),vI=d.querySelector('.hv');
-  const upd=()=>{const o=KINDS[d.dataset.kind],q=nameI.value.trim();
+  const upd=()=>{const o=KINDS[d.dataset.kind],q=d._items?cleanQ(d._items[0].name):nameI.value.trim();
     a.textContent=o.linkLabel;a.href=o.url(q);a.classList.toggle('dis',!q||!o.url(q));
     nameI.placeholder=o.namePh;vI.placeholder=o.valPh;};
   nameI.addEventListener('input',upd);upd();
@@ -339,14 +362,14 @@ function readState(){
     N0:num($('#total0').value),lastone:num($('#lastone').value)||0,fee:num($('#fee').value)||0,
     bonusV:num($('#bonusV').value)||0,bonusR:num($('#bonusR').value),
     hits:$$('.hit').map(d=>({name:d.querySelector('.hn').value.trim(),k:num(d.querySelector('.hk').value),
-      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value),kind:d.dataset.kind||'card'})).filter(h=>h.name||isFinite(h.k))};
+      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value),kind:d.dataset.kind||'card',items:d._items||null})).filter(h=>h.name||isFinite(h.k))};
 }
 function writeState(s){
   const set=(id,v)=>{$(id).value=(v==null||!isFinite(v)&&typeof v==='number')?'':(typeof v==='number'?v.toLocaleString('ko-KR'):v)};
   set('#site',s.site||'');set('#pack',s.pack||'');set('#price',s.price);set('#remain',s.N);set('#miss',s.miss||'');
   set('#budget',s.budget);set('#total0',s.N0);set('#lastone',s.lastone||'');set('#fee',s.fee||'');set('#bonusV',s.bonusV||'');set('#bonusR',s.bonusR);
   $$('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.v===(s.mode||'hyper')));
-  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,kind:h.kind,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));
+  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,kind:h.kind,items:h.items,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));
   if(s.N0||s.lastone||s.fee||s.bonusV)$('details.more').open=true;
 }
 
@@ -511,7 +534,7 @@ function run(){
   try{history.replaceState(null,'','#'+encodeURIComponent(JSON.stringify(compact(s))))}catch(e){}
 }
 const compact=s=>({site:s.site,pack:s.pack,price:s.price,N:s.N,mode:s.mode,miss:s.miss,budget:s.budget,N0:isFinite(s.N0)?s.N0:null,
-  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,kind:h.kind||'card',k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null}))});
+  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,kind:h.kind||'card',k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null,items:h.items||undefined}))});
 $('#go').onclick=run;
 $('#back').onclick=()=>{$('#result').style.display='none';$('#tab-calc').classList.remove('hide');$('#ctaRes').classList.add('hide');$('#ctaCalc').classList.remove('hide');window.scrollTo({top:0})};
 $('#sim1').onclick=()=>{
@@ -628,7 +651,9 @@ function applyFields(f,url){
   if(f.total!=null)s.N0=f.total;
   if(f.fixed_probability===true)s.mode='fixed';else if(f.fixed_probability===false)s.mode='hyper';
   const old=Object.fromEntries(s.hits.map(h=>[h.name,h.v]));
-  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>({name:h.name,kind:KINDS[h.kind]?h.kind:'card',k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[h.name])?old[h.name]:(h.value??NaN)}));got.push('히트 '+f.hits.length+'개')}
+  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>{const its=Array.isArray(h.items)?h.items:[];
+    const nm=its.length?`${h.name} · ${cleanQ(its[0].name)}${its.length>1?` 외 ${its.length-1}종`:''}`:h.name;
+    return {name:nm,kind:KINDS[h.kind]?h.kind:'card',items:its.length?its:null,k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[nm])?old[nm]:(h.value??NaN)}});got.push('히트 '+f.hits.length+'개')}
   else miss.push('히트 목록');
   if(isFinite(f.last_one_price)&&f.last_one_price>0)s.lastone=f.last_one_price;
   if(!s.site&&url){try{s.site=new URL(url).hostname.replace(/^www\./,'')}catch(e){}}
