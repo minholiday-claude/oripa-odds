@@ -128,13 +128,14 @@ module.exports = async function handler(req, res) {
   const boxes = all.filter(isBox);
   const items = all.filter(i => !isBox(i) && i.card);
   // 상자·팩은 KREAM 검색 결과에서 (브라우저로 열어서) 언어·이름이 맞는 상품 가격
+  let boxDebug = '';
   const boxJob = (async () => {
     const res = {};
     if (!boxes.length) return res;
     const q = b => String(b.card || b.name).replace(/^포켓몬\s*TCG\s*/, '').replace(/\s*\((JP|KR|EN)\)/g, '').replace(/\s*\([^)]*판[^)]*\)/g, '').trim();
     const qs = [...new Set(boxes.map(q))].slice(0, 8);
     let found = {};
-    try { found = await require('./_render').kreamSearch(qs); } catch { found = {}; }
+    try { found = await require('./_render').kreamSearch(qs); boxDebug = found.__debug || ''; } catch (e) { found = {}; boxDebug = String(e && e.message || e).slice(0, 300); }
     for (const b of boxes) {
       const list = found[q(b)] || [];
       const lk = langKey(b.language, b.name);
@@ -146,7 +147,7 @@ module.exports = async function handler(req, res) {
     }
     return res;
   })();
-  if (!items.length) { const br = await boxJob; return res.status(200).json({ prices: br }); }
+  if (!items.length) { const br = await boxJob; return res.status(200).json({ prices: br, debug: boxDebug }); }
 
   try {
     const rateJ = await getJson(`${PAV}/api/rates`);

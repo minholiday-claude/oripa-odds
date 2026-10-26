@@ -62,6 +62,7 @@ async function kreamSearch(queries) {
           }
         }
         out[q] = list;
+        out.__debug = (out.__debug || '') + `[${q}] ${page.url()} :: ${text.slice(0, 300).replace(/\n/g, ' / ')}\n`;
       } catch { out[q] = []; } finally { await page.close().catch(() => {}); }
     }
   } finally { await browser.close().catch(() => {}); }
