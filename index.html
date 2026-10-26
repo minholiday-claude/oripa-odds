@@ -401,7 +401,7 @@ function hitRow(h={}){
   if(d._items){const recalc=()=>{let q=0,sum=0,mq=0,mn=0;d.querySelectorAll('.ip').forEach((el,i)=>{const p=num(el.value),qq=d._items[i].qty||1;d._items[i].price=isFinite(p)?p:null;if(isFinite(p)){q+=qq;sum+=p*qq}else{mq+=qq;mn++}});
       if(q)d.querySelector('.hv').value=Math.round(sum/q).toLocaleString('ko-KR');
       d._missing=mq;const n=d.querySelector('.miss-note');
-      n.classList.toggle('hide',!mq);n.textContent=mq?`가격 없는 상품 ${mn}종(${mq.toLocaleString()}개)이 있어요. 넣어야 판정할 수 있어요`:''};
+      n.classList.toggle('hide',!mq);n.textContent=mq?`가격 없는 상품 ${mn}종(${mq.toLocaleString()}개) · 상자는 KREAM 버튼으로 시세를 확인해 넣어 주세요`:''};
     d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});
     d.querySelectorAll('.cn').forEach(b=>b.onclick=()=>b.parentElement.classList.toggle('open'));
     setTimeout(recalc,0);}
