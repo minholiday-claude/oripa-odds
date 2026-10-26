@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>오리파 승률 계산기</title>
+<title>오리파이기기 — 오리파 승률 계산기</title>
 <meta name="description" content="오리파 화면의 숫자를 넣으면 지금 사도 되는지 확률로 알려 드려요.">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -31,7 +31,7 @@ button,input,select{font:inherit;color:inherit}
 .wrap{max-width:560px;margin:0 auto;padding:0 16px}
 header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px)}
 header .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
-.logo{font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px}
+.logo{font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;cursor:pointer}
 .logo i{width:24px;height:24px;border-radius:8px;background:var(--accent-ink);display:inline-grid;place-items:center;color:var(--accent);font-style:normal;font-size:13px}
 .tabs{display:flex;gap:4px;background:var(--input);border-radius:12px;padding:4px}
 .tabs button{border:0;background:none;padding:6px 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--faint);cursor:pointer}
@@ -146,7 +146,7 @@ details.more .inner{padding-top:12px}
 </head>
 <body>
 <header><div class="wrap">
-  <div class="logo"><i>%</i>오리파 승률</div>
+  <a class="logo" href="./" id="home" aria-label="오리파이기기 처음으로"><i>%</i>오리파이기기</a>
   <div class="tabs"><button class="on" data-tab="calc">계산</button><button data-tab="saved">비교 <span id="savedN"></span></button></div>
 </div></header>
 
@@ -557,6 +557,7 @@ function switchTab(t){
   window.scrollTo({top:0});
 }
 $$('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+$('#home').onclick=e=>{e.preventDefault();switchTab('calc');try{history.replaceState(null,'',location.pathname)}catch(_){}};
 
 /* ---------- 예시 · 시작 ---------- */
 $('#example').onclick=()=>{
