@@ -165,7 +165,11 @@ module.exports = async function handler(req, res) {
     const prompt = `오리파 상품과 카드 시세 사이트(파빌리온)의 검색 후보를 짝지어 주세요.
 - 세트 이름은 한국어/일본어/영어로 다르게 적힐 수 있어요 (예: 테라스탈 페스타 ex = テラスタルフェスex = SV8a, 이브이 히어로즈 = イーブイヒーローズ = S6a).
 - 레어도(SAR, SR, HR, UR, CHR, CSR, AR, MA)와 카드 번호, 버전(마스터볼 미러 = Master Ball Mirror 등)이 맞는지 확인하세요.
-- 같은 카드라도 세트·레어도가 다르면 다른 카드예요.
+- 같은 카드라도 세트·레어도가 다르면 다른 카드예요. 후보에 레어도가 적혀 있으면 반드시 상품 레어도와 맞아야 해요:
+  SAR = Special illustration rare, AR = Illustration rare, CHR = Character Rare, CSR = Character Super Rare,
+  SR = Ultra Rare 또는 Super Rare, RR = Double rare, UR·HR = Hyper Rare 또는 Secret Rare, MUR = Mega Hyper Rare, MA = Mega Attack Rare.
+  예: 상품이 SAR인데 후보가 Mega Hyper Rare면 다른 카드예요.
+- 후보 버전이 SA(스페셜 아트)·Alt Art·Mirror 같은 특수 버전이면, 상품명에 그 표기(SA, 스페셜 아트, 미러 등)가 있을 때만 고르세요. 없으면 normal/holo 버전을 고르세요.
 - 레어도 표기가 없는 후보는 번호로 판단하세요. 번호가 세트 '기본 N장'보다 크면 시크릿 레어(AR, SR, SAR, UR, MA 등)이고, 같은 세트에서는 보통 AR < SR < SAR < UR 순으로 번호가 커져요. 예: 테라스탈 페스타 ex(기본 187장)의 블래키 ex SAR은 #217, #093은 일반 RR.
 - 세트·이름이 맞는 후보가 있으면 버전이 애매해도 가장 그럴듯한 것을 고르고 confidence를 낮추세요. 정말 맞는 세트가 없을 때만 id를 null로 두세요.
 - 이름 앞의 'N의', '히스이', '메가' 같은 말은 일본어 이름(Nの, ヒスイ, メガ)에 들어 있어요. 태그 팀은 '블래키＆다크라이' = 'ブラッキー&ダークライ'.
