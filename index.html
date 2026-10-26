@@ -761,6 +761,7 @@ function applyFields(f,url){
     return {name:nm,detail:det,kind:KINDS[h.kind]?h.kind:'card',items:its.length?its:null,k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[nm])?old[nm]:(h.value??NaN)}});got.push('히트 '+f.hits.length+'개')}
   else miss.push('히트 목록');
   if(isFinite(f.last_one_price)&&f.last_one_price>0)s.lastone=f.last_one_price;
+  if(isFinite(f.miss_value)&&f.miss_value>=0)s.miss=f.miss_value;
   if(!s.site&&url){try{s.site=new URL(url).hostname.replace(/^www\./,'')}catch(e){}}
   writeState(s);
   ['#site','#pack','#price','#remain'].forEach((id,i)=>{if([f.site,f.pack,f.price,f.remaining][i]!=null)$(id).classList.add('filled')});

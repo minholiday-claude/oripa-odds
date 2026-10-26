@@ -1,0 +1,8 @@
+{
+  "name": "oripa-odds",
+  "private": true,
+  "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
+    "puppeteer-core": "^25.16.0"
+  }
+}
