@@ -727,7 +727,7 @@ async function readLink(){
   const url=$('#upUrl').value.trim();
   if(!/^https?:\/\//.test(url)){toast('https:// 로 시작하는 링크를 넣어 주세요');return}
   $('#thumbs').innerHTML='';
-  upMsg(loadingHtml('페이지를 읽고 있어요'),true);
+  upMsg(loadingHtml('피카츄가 페이지를 읽고 있어요'),true);
   try{
     const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url})});
     const j=await r.json();
@@ -742,7 +742,7 @@ async function handleFiles(all){
   if(all.length>3)toast('처음 3장만 읽을게요');
   let ims;try{ims=await Promise.all(files.map(shrink))}catch(err){upMsg(err.message);return}
   $('#thumbs').innerHTML=ims.map(i=>`<img src="${i.preview}" alt="">`).join('');
-  upMsg(loadingHtml('화면을 읽고 있어요'),true);
+  upMsg(loadingHtml('피카츄가 화면을 읽고 있어요'),true);
   try{
     const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({images:ims.map(({type,data})=>({type,data}))})});
     const j=await r.json();
