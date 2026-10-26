@@ -1,10 +1,11 @@
 // 화면이 나중에 그려지는 사이트(자바스크립트 렌더링)를 진짜 브라우저로 열어 글자를 읽는다.
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
 
 const PRIVATE = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[?::1\]?|\[?f[cd])/i;
 
 async function renderText(url) {
+  // 둘 다 ES 모듈이라 import()로 불러옴
+  const chromium = (await import('@sparticuz/chromium')).default;
+  const puppeteer = (await import('puppeteer-core')).default;
   const browser = await puppeteer.launch({
     args: chromium.args,
     executablePath: await chromium.executablePath(),
