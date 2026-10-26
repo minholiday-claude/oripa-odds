@@ -80,7 +80,8 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .item .cn::after{content:" ▾";color:var(--faint);font-size:10px}
 .item .nm.open .cn::after{content:" ▴"}
 .item .det{display:none;font-size:12px;color:var(--faint);margin-top:4px;line-height:1.4}
-.vnote{font-size:12px;color:var(--orange);font-weight:600;margin-top:6px}
+.vnote{font-size:13px;color:var(--sub);line-height:1.6;margin-top:10px;background:var(--orange-l);border-radius:12px;padding:10px 12px}
+.vnote b{color:var(--orange)}
 .miss-note{font-size:12px;font-weight:700;color:var(--orange);margin:8px 2px 0}
 @keyframes needp{0%,100%{box-shadow:inset 0 0 0 2px var(--orange)}50%{box-shadow:inset 0 0 0 2px transparent}}
 .in.need{animation:needp .5s ease-in-out 3}
@@ -405,7 +406,7 @@ function hitRow(h={}){
   if(d._items){const recalc=()=>{let q=0,sum=0,mq=0,mn=0;d.querySelectorAll('.ip').forEach((el,i)=>{const p=num(el.value),qq=d._items[i].qty||1;d._items[i].price=isFinite(p)?p:null;if(isFinite(p)){q+=qq;sum+=p*qq}else{mq+=qq;mn++}});
       if(q)d.querySelector('.hv').value=Math.round(sum/q).toLocaleString('ko-KR');
       d._missing=mq;const n=d.querySelector('.miss-note');
-      n.classList.toggle('hide',!mq);n.textContent=mq?`시세 없는 상품 ${mn}종(${mq.toLocaleString()}개)은 빼고 평균을 냈어요`:''};
+      n.classList.toggle('hide',!mq);n.textContent=mq?`${mn}종은 시세를 못 찾아서 평균에 안 넣었어요`:''};
     d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});
     d.querySelectorAll('.cn').forEach(b=>b.onclick=()=>b.parentElement.classList.toggle('open'));
     setTimeout(recalc,0);}
@@ -492,10 +493,10 @@ function analyze(s){
   const missingQty=s.hits.reduce((a,h)=>a+(h.missing||0),0);
   const notes=[];
   s.hits.forEach(h=>{const nm=h.name||'히트';
-    if(!(isFinite(h.v)&&h.v>=0))notes.push(`${nm} 시세 없음(0원으로 계산)`);
-    else if(h.missing)notes.push(`${nm} 일부 상품 시세 없음(${h.missing.toLocaleString()}개 빼고 평균)`);});
-  const lowN=s.hits.reduce((a,h)=>a+(h.low||0),0);if(lowN)notes.push(`대략 맞춘 시세 ${lowN}개`);
-  if(!s.miss&&s.N>s.hits.reduce((a,h)=>a+(h.k||0),0))notes.push('꽝 가치 0원으로 계산');
+    if(!(isFinite(h.v)&&h.v>=0))notes.push(`${josa(nm,'은','는')} 시세가 없어서 0원으로 쳤어요`);
+    else if(h.missing)notes.push(`${nm} 중 ${h.missing.toLocaleString()}개는 시세를 못 찾아 빼고 계산했어요`);});
+  const lowN=s.hits.reduce((a,h)=>a+(h.low||0),0);if(lowN)notes.push(`주황 칸 ${lowN}개는 비슷한 카드 시세로 넣었어요`);
+  if(!s.miss&&s.N>s.hits.reduce((a,h)=>a+(h.k||0),0))notes.push('꽝은 0원으로 쳤어요');
   const H=s.hits.reduce((a,h)=>a+h.k*(isFinite(h.v)?h.v:0),0);
   const ev=(H+(s.N-K)*s.miss)/s.N, rtp=ev/s.price;
   const budget=isFinite(s.budget)&&s.budget>0?s.budget:100000;
@@ -557,7 +558,7 @@ function render(r){
   if(r.v==='no'&&r.trend&&r.trend.topRatio<=0.5&&r.rtp>=0.85)desc='가장 좋은 히트가 많이 빠져서 처음 확률의 절반 이하예요.';
   if(r.waitWhy==='up')desc+=' 처음보다 좋아지는 중이에요.';
   $('#vDesc').textContent=desc;
-  $('#vNote').classList.toggle('hide',!r.notes.length);$('#vNote').textContent=r.notes.length?'정보 부족 · '+r.notes.join(' · '):'';
+  $('#vNote').classList.toggle('hide',!r.notes.length);$('#vNote').innerHTML=r.notes.length?'<b>대략적인 판정이에요</b>'+r.notes.map(t=>'<br>· '+esc(t)).join(''):'';
   $('#kRtp').textContent=r.priced?pct(r.rtp,1):'-';
   $('#kWinLbl').textContent=`승률 (${r.n.toLocaleString()}번 · ${won(r.cost)})`;
   $('#kWin').textContent=r.priced?pct(r.win,1):'-';
@@ -608,6 +609,8 @@ function drawHist(vals,cost){
   $('#stack').innerHTML=seg.map(([x,col])=>x?`<i style="width:${x/n*100}%;background:${col}"></i>`:'').join('');
   $('#legend').innerHTML=seg.map(([x,col,l])=>`<span style="--c:${col}">${l} ${pct(x/n,1)}</span>`).join('');
 }
+// 받침에 따라 은/는, 을/를
+const josa=(w,a,b)=>{const c=String(w).trim().slice(-1).charCodeAt(0);const has=c>=0xAC00&&c<=0xD7A3?(c-0xAC00)%28>0:/[0-9lmnr]$/i.test(w);return w+(has?a:b)};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 let last=null;
@@ -792,7 +795,7 @@ function applyFields(f,url){
   ['#site','#pack','#price','#remain'].forEach((id,i)=>{if([f.site,f.pack,f.price,f.remaining][i]!=null)$(id).classList.add('filled')});
   $$('.hit .hn,.hit .hk').forEach(el=>{if(el.value)el.classList.add('filled')});
   setTimeout(()=>$$('.filled').forEach(el=>el.classList.remove('filled')),6000);
-  if(miss.length)upMsg(`못 찾은 항목: ${miss.join(', ')}`);else $('#upMsg').classList.add('hide');
+  if(miss.length)upMsg(`${josa(miss.join(', '),'을','를')} 못 읽었어요. 직접 넣어 주세요.`);else $('#upMsg').classList.add('hide');
   toast('자동으로 채웠어요');
   autoPrice(miss);
 }
@@ -839,14 +842,16 @@ async function autoPrice(miss=[]){
         it.price=p.price;it.src='pavilion';it.match=p.match;it.low=p.confidence==='low'||!!p.gradeFallback;
         const w=p.confidence==='low'||p.gradeFallback;ok++;if(w)warn++;
         ips[ii].value=p.price.toLocaleString('ko-KR');ips[ii].classList.add(w?'pw':'pp');
-        dets[ii].insertAdjacentHTML('beforeend',`<br><em class="src">파빌리온 · ${esc(p.match)}${p.grade?' · '+esc(p.grade):''}${p.gradeFallback?' (원하는 등급 시세 없음)':''}${p.confidence==='low'?' · 확인 필요':''}</em>`);
+        const mp=String(p.match||'').split(' | ').filter(x=>x&&!/^(ja|en|ko|normal|holo)$/.test(x)).slice(1,4).join(' ');
+        const g=p.grade?String(p.grade).replace(/^psa/i,'PSA ').replace(/^raw.*/,'미감정'):'';
+        dets[ii].insertAdjacentHTML('beforeend',`<br><em class="src">파빌리온 시세: ${esc(mp||p.match)}${g?' ('+esc(g)+')':''}${p.gradeFallback?' · 같은 등급 시세가 없어 다른 등급 값':''}${p.confidence==='low'?' · 비슷한 카드 시세':''}</em>`);
       });
       if(ips[0])ips[0].dispatchEvent(new Event('input'));
     });
     const tail=req.length-ok;
-    const parts=[`시세 ${ok}개 넣었어요`];if(warn)parts.push(`${warn}개는 확인 필요`);if(tail)parts.push(`${tail}개는 못 찾았어요`);
-    if(miss.length)parts.unshift(`못 찾은 항목: ${miss.join(', ')}`);
-    upMsg(parts.join(' · '));
+    const parts=[`시세 ${ok}개를 채웠어요.`];if(warn)parts.push(`주황 칸 ${warn}개는 비슷한 카드 시세예요.`);if(tail)parts.push(`${tail}개는 못 찾았으니 직접 넣어 주세요.`);
+    if(miss.length)parts.unshift(`${josa(miss.join(', '),'을','를')} 못 읽었어요.`);
+    upMsg(parts.join(' '));
     goToNeeded();
   }catch(e){upMsg('시세를 가져오지 못했어요');goToNeeded()}
 }
