@@ -41,7 +41,11 @@ const TOOL = {
         items: {
           type: 'object',
           properties: {
-            name: { type: 'string', description: '등급명 또는 카드명' },
+            name: { type: 'string', description: '등급명(1등, 레전더리 등). 등급 없이 카드 한 장이면 화면의 이름 그대로' },
+            card_name: { type: ['string', 'null'], description: '카드명만. 포켓몬/캐릭터 이름 + 이름에 붙는 형태(ex, V, VMAX, VSTAR, GX, 빛나는, 로켓단의 등)까지. 레어도(SAR, SR, HR, UR, AR, P)·세트명·"프로모 카드"·언어는 빼기. 예: "마리오 피카츄 P XY 프로모 카드 (일어판)" → "마리오 피카츄", "블래키 VMAX HR 이브이 히어로즈" → "블래키 VMAX", "로켓단의 뮤츠 ex SAR 로켓단의 영광" → "로켓단의 뮤츠 ex". 박스·팩이면 상품명(예: "어비스 아이 메가 확장팩 1 박스")' },
+            rarity: { type: ['string', 'null'], description: '레어도 표기 (SAR, SR, HR, UR, AR, P 등)' },
+            set: { type: ['string', 'null'], description: '세트·확장팩 이름' },
+            language: { type: ['string', 'null'], description: '일어판, 한글판, 영문판 등' },
             kind: { type: 'string', enum: ['card', 'box', 'pack', 'etc'], description: '받는 것이 주로 카드면 card, 박스면 box, 카드팩이면 pack, 포인트·쿠폰·굿즈 등은 etc' },
             remaining: { type: ['number', 'null'], description: '남은 수' },
             initial: { type: ['number', 'null'], description: '처음 수' },
@@ -51,15 +55,19 @@ const TOOL = {
               items: {
                 type: 'object',
                 properties: {
-                  name: { type: 'string' },
+                  name: { type: 'string', description: '사이트에 적힌 상품명 그대로' },
+                  card_name: { type: ['string', 'null'], description: '카드명만. 포켓몬/캐릭터 이름 + 이름에 붙는 형태(ex, V, VMAX, VSTAR, GX, 빛나는, 로켓단의 등)까지. 레어도(SAR, SR, HR, UR, AR, P)·세트명·"프로모 카드"·언어는 빼기. 예: "마리오 피카츄 P XY 프로모 카드 (일어판)" → "마리오 피카츄", "블래키 VMAX HR 이브이 히어로즈" → "블래키 VMAX", "로켓단의 뮤츠 ex SAR 로켓단의 영광" → "로켓단의 뮤츠 ex". 박스·팩이면 상품명(예: "어비스 아이 메가 확장팩 1 박스")' },
+                  rarity: { type: ['string', 'null'], description: '레어도 표기 (SAR, SR, HR, UR, AR, P 등)' },
+                  set: { type: ['string', 'null'], description: '세트·확장팩 이름' },
+                  language: { type: ['string', 'null'], description: '일어판, 한글판, 영문판 등' },
                   price: { type: ['number', 'null'], description: '사이트에 적힌 가격, 원' },
                   qty: { type: ['number', 'null'], description: '수량 (× 숫자)' },
                 },
-                required: ['name', 'price', 'qty'],
+                required: ['name', 'card_name', 'rarity', 'set', 'language', 'price', 'qty'],
               },
             },
           },
-          required: ['name', 'kind', 'remaining', 'initial', 'items'],
+          required: ['name', 'card_name', 'rarity', 'set', 'language', 'kind', 'remaining', 'initial', 'items'],
         },
       },
       last_one: { type: ['string', 'null'], description: '라스트원 보너스 상품 설명' },
@@ -174,8 +182,8 @@ function finish(f) {
       const q = its.reduce((a, i) => a + (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const sum = its.reduce((a, i) => a + i.price * (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const list = (h.items || []).filter(i => i && i.name).slice(0, 40)
-        .map(i => ({ name: String(i.name).trim(), price: isFinite(i.price) ? i.price : null, qty: isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }));
-      const out = { name: h.name, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
+        .map(i => ({ name: String(i.name).trim(), card: i.card_name || null, rarity: i.rarity || null, set: i.set || null, language: i.language || null, price: isFinite(i.price) ? i.price : null, qty: isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }));
+      const out = { name: h.name, card_name: h.card_name || null, rarity: h.rarity || null, set: h.set || null, language: h.language || null, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
       if (q > 0) out.value = Math.round(sum / q);   // 등급 안 상품 가격의 평균 (사이트 표기 가격)
       return out;
     });

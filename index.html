@@ -68,6 +68,9 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .kinds{display:flex;gap:6px;margin-bottom:8px}
 .kinds button{border:0;height:30px;padding:0 12px;border-radius:99px;background:var(--card);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
 .kinds button.on{background:var(--accent-ink);color:var(--accent)}
+.hit .hd{background:var(--card);height:40px;font-size:14px;font-weight:500;margin-bottom:8px}
+.lk{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pav.kr{background:#F4F4F4;color:#222}
 details.items{margin-top:10px;background:var(--card);border-radius:12px;padding:4px 12px}
 details.items summary{list-style:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--sub);padding:8px 0;display:flex;justify-content:space-between}
 details.items summary::after{content:"펼치기";color:var(--faint);font-weight:600}
@@ -143,6 +146,15 @@ details.more .inner{padding-top:12px}
   font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:9;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .hide{display:none!important}
+/* 설명은 ? 뱃지로 숨김 */
+.card .hint,.card .small,.verdict .hint{display:none}
+.card.help .hint,.card.help .small{display:block}
+.qb{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:6px;border-radius:50%;border:0;background:var(--input);color:var(--faint);
+  font-size:12px;font-weight:800;cursor:pointer;vertical-align:2px}
+.card.help .qb{background:var(--accent-ink);color:var(--accent)}
+.warnbox{text-align:center;padding:4px 0 24px}
+.warnbox .warn{display:none;text-align:left}
+.warnbox.open .warn{display:block}
 .up{display:flex;align-items:center;gap:14px;cursor:pointer}
 .up .ic{width:48px;height:48px;border-radius:14px;background:var(--accent-l);color:var(--accent-text);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
 .up b{display:block;font-size:17px}
@@ -186,7 +198,7 @@ details.more .inner{padding-top:12px}
   <div class="card" id="upCard">
     <label class="up" id="upLbl">
       <div class="ic">📷</div>
-      <div><b>스크린샷으로 자동 채우기</b><span id="upSub">사진을 여기로 끌어오거나, 눌러서 첨부하세요. 붙여넣기(Ctrl+V)도 돼요 (최대 3장)</span></div>
+      <div><b>스크린샷으로 자동 채우기</b><span id="upSub">끌어오기 · 눌러서 첨부 · 붙여넣기 (최대 3장)</span></div>
       <input type="file" id="upFile" accept="image/*" multiple hidden>
     </label>
     <div class="linkrow"><input class="in" id="upUrl" type="url" inputmode="url" placeholder="또는 오리파 링크를 붙여넣으세요 (https://...)"><button class="ghost" id="upGo">읽기</button></div>
@@ -295,7 +307,8 @@ details.more .inner{padding-top:12px}
     <p id="simTxt" style="margin-top:12px;font-weight:600"></p>
   </div>
 
-  <p class="warn">사이트가 보여 주는 숫자가 정직하다는 가정에서 계산했어요. 누군가 뽑으면 숫자는 바로 바뀌어요. 확률 정보일 뿐 구매 권유가 아니에요. 오리파는 전체로 보면 파는 쪽이 이득을 보도록 짜인 경우가 많아요.</p>
+  <div class="warnbox" id="warnbox"><button class="ghost" id="warnBtn" style="height:32px;font-size:13px">ⓘ 계산 기준</button>
+  <p class="warn">사이트가 보여 주는 숫자가 정직하다는 가정에서 계산했어요. 누군가 뽑으면 숫자는 바로 바뀌어요. 확률 정보일 뿐 구매 권유가 아니에요. 오리파는 전체로 보면 파는 쪽이 이득을 보도록 짜인 경우가 많아요.</p></div>
 </section>
 
 <!-- ============ 비교 ============ -->
@@ -322,50 +335,60 @@ const fmtInput=el=>{const n=num(el.value);if(el.value.trim()==='')return;if(isFi
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)}
 
 /* ---------- 히트 목록 ---------- */
+// 시세 검색: 파빌리온은 '카드명'만, KREAM은 '전체 상품명'으로 잘 잡힘 (2026-10-26 직접 검색해 확인)
+const PAV=q=>q?'https://pavilion-tcg.com/search?q='+encodeURIComponent(q):'';
+const KREAM=q=>q?'https://kream.co.kr/search?keyword='+encodeURIComponent(q):'';
 const KINDS={
-  card:{label:'카드',namePh:'카드명 또는 등급 (예: 리자몽 ex SAR)',valPh:'1장 시세',linkLabel:'파빌리온 시세 ↗',url:q=>q?'https://pavilion-tcg.com/search?q='+encodeURIComponent(q):''},
-  box:{label:'박스',namePh:'박스 이름 (예: EB03 1박스)',valPh:'박스 1개 시세',linkLabel:'박스 시세 검색 ↗',url:q=>q?'https://search.shopping.naver.com/search/all?query='+encodeURIComponent(q):''},
-  pack:{label:'팩',namePh:'팩 이름과 수량 (예: 30주년 팩 3팩)',valPh:'받는 팩 전체 시세',linkLabel:'팩 시세 검색 ↗',url:q=>q?'https://search.shopping.naver.com/search/all?query='+encodeURIComponent(q):''},
-  etc:{label:'기타',namePh:'포인트, 쿠폰, 굿즈 등',valPh:'원으로 환산한 가치',linkLabel:'시세 검색 없음',url:q=>''}
+  card:{label:'카드',namePh:'카드명만 (예: 블래키 VMAX)',detPh:'레어도·세트·언어 (예: HR 이브이 히어로즈 일어판)',valPh:'1장 시세',pav:true},
+  box:{label:'박스',namePh:'박스 이름 (예: 어비스 아이 1 박스)',detPh:'언어·구성 (예: 30팩 한글판)',valPh:'박스 1개 시세',pav:false},
+  pack:{label:'팩',namePh:'팩 이름 (예: 30주년 확장팩)',detPh:'수량 (예: 3팩)',valPh:'받는 팩 전체 시세',pav:false},
+  etc:{label:'기타',namePh:'포인트, 쿠폰, 굿즈 등',detPh:'설명 (선택)',valPh:'원으로 환산한 가치',pav:false}
 };
-const cleanQ=n=>String(n).replace(/\([^)]*(판|팩)[^)]*\)/g,'').replace(/\s+/g,' ').trim();
+const cleanQ=n=>String(n).replace(/^포켓몬\s*TCG\s*/,'').replace(/\s+/g,' ').trim();
 const guessKind=n=>/박스|box/i.test(n)?'box':/팩|pack/i.test(n)?'pack':'card';
+const links=(kind,card,full)=>{const o=KINDS[kind]||KINDS.card;let h='';
+  if(o.pav&&card)h+=`<a class="pav" target="_blank" rel="noopener" href="${PAV(card)}">파빌리온 ↗</a>`;
+  if(kind!=='etc'&&(full||card))h+=`<a class="pav kr" target="_blank" rel="noopener" href="${KREAM(cleanQ(full||card))}">KREAM ↗</a>`;
+  return h};
 function itemRow(it){
-  const k=guessKind(it.name),o=KINDS[k];
-  return `<div class="item"><div class="nm">${esc(it.name)} <small>× ${it.qty||1}</small></div>
-    <div class="unit"><input class="in ip" inputmode="numeric" placeholder="가격" value="${isFinite(it.price)&&it.price!=null?Number(it.price).toLocaleString('ko-KR'):''}" data-q="${it.qty||1}"><em>원</em></div>
-    <a class="pav" target="_blank" rel="noopener" href="${o.url(cleanQ(it.name))}">${k==='card'?'파빌리온 ↗':'시세 ↗'}</a></div>`;
+  const k=guessKind(it.name),card=it.card||cleanQ(it.name),det=[it.rarity,it.set,it.language].filter(Boolean).join(' · ');
+  return `<div class="item"><div class="nm"><b>${esc(card)}</b>${det?` <small>${esc(det)}</small>`:''} <small>× ${it.qty||1}</small></div>
+    <div class="unit"><input class="in ip" inputmode="numeric" placeholder="가격" value="${isFinite(it.price)&&it.price!=null?Number(it.price).toLocaleString('ko-KR'):''}"><em>원</em></div>
+    <div class="lk">${links(k,k==='card'?card:'',it.name)}</div></div>`;
 }
 function hitRow(h={}){
   const d=document.createElement('div');d.className='hit';
   const kind=h.kind||'card';
   d.innerHTML=`<div class="kinds">${Object.entries(KINDS).map(([k,o])=>`<button type="button" data-k="${k}" class="${k===kind?'on':''}">${o.label}</button>`).join('')}</div>
     <div class="top">
-      <input class="in hn" placeholder="등급 또는 카드명 (예: 레전더리)" value="${esc(h.name??'')}">
+      <input class="in hn" value="${esc(h.name??'')}">
       <div class="unit"><input class="in hk" inputmode="numeric" placeholder="남은 수" value="${h.k??''}"><em>개</em></div>
       <button class="x" title="삭제">×</button></div>
+    <input class="in hd" value="${esc(h.detail??'')}">
     <div class="bot">
       <div class="row2" style="gap:8px">
         <div class="unit"><input class="in hv" inputmode="numeric" placeholder="1장 시세" value="${h.v!=null&&h.v!==''?Number(h.v).toLocaleString('ko-KR'):''}"><em>원</em></div>
         <div class="unit"><input class="in hk0" inputmode="numeric" placeholder="처음 수(선택)" value="${h.k0??''}"><em>개</em></div>
       </div>
-      <a class="pav" target="_blank" rel="noopener"></a>
+      <div class="lk hl"></div>
     </div>${h.items&&h.items.length?`<details class="items"><summary>이 등급의 상품 ${h.items.length}종</summary>
-      ${h.items.map(itemRow).join('')}<p class="note">가격은 사이트가 적은 값이에요. 파빌리온에서 확인하고 고치면 위 시세(등급 평균)가 다시 계산돼요.</p></details>`:''}`;
+      ${h.items.map(itemRow).join('')}</details>`:''}`;
   d.dataset.kind=kind;d._items=h.items&&h.items.length?h.items.map(i=>({...i})):null;
   if(d._items){const recalc=()=>{let q=0,sum=0;d.querySelectorAll('.ip').forEach((el,i)=>{const p=num(el.value),qq=d._items[i].qty||1;d._items[i].price=isFinite(p)?p:null;if(isFinite(p)){q+=qq;sum+=p*qq}});
       if(q)d.querySelector('.hv').value=Math.round(sum/q).toLocaleString('ko-KR')};
     d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});}
-  const nameI=d.querySelector('.hn'),a=d.querySelector('.pav'),vI=d.querySelector('.hv');
-  const upd=()=>{const o=KINDS[d.dataset.kind],q=d._items?cleanQ(d._items[0].name):nameI.value.trim();
-    a.textContent=o.linkLabel;a.href=o.url(q);a.classList.toggle('dis',!q||!o.url(q));
-    nameI.placeholder=o.namePh;vI.placeholder=o.valPh;};
-  nameI.addEventListener('input',upd);upd();
+  const nameI=d.querySelector('.hn'),detI=d.querySelector('.hd'),vI=d.querySelector('.hv'),lk=d.querySelector('.hl');
+  const upd=()=>{const o=KINDS[d.dataset.kind];
+    nameI.placeholder=d._items?'등급 이름 (예: 1등)':o.namePh;detI.placeholder=o.detPh;vI.placeholder=o.valPh;
+    detI.classList.toggle('hide',!!d._items);
+    // 상품 목록이 있으면 링크는 상품마다, 없으면 카드명·상세로
+    lk.innerHTML=d._items?'':links(d.dataset.kind,nameI.value.trim(),(nameI.value+' '+detI.value).trim());};
+  [nameI,detI].forEach(el=>el.addEventListener('input',upd));upd();
   d.querySelectorAll('.kinds button').forEach(b=>b.onclick=()=>{d.dataset.kind=b.dataset.k;d.querySelectorAll('.kinds button').forEach(x=>x.classList.toggle('on',x===b));upd()});
   d.querySelector('.x').onclick=()=>{d.remove();ensureBlank()};
   // 마지막 칸에 입력을 시작하면 빈 칸을 하나 자동으로 붙임
   [nameI,d.querySelector('.hk')].forEach(el=>el.addEventListener('input',()=>{if(d===$$('.hit').at(-1)&&el.value.trim())ensureBlank()}));
-  d.querySelector('.hv').addEventListener('blur',e=>fmtInput(e.target));
+  vI.addEventListener('blur',e=>fmtInput(e.target));
   return d;
 }
 $('#addHit').onclick=()=>$('#hits').append(hitRow());
@@ -382,7 +405,7 @@ function readState(){
     mode:$('#mode .on').dataset.v,miss:num($('#miss').value)||0,budget:num($('#budget').value),
     N0:num($('#total0').value),lastone:num($('#lastone').value)||0,fee:num($('#fee').value)||0,
     bonusV:num($('#bonusV').value)||0,bonusR:num($('#bonusR').value),
-    hits:$$('.hit').map(d=>({name:d.querySelector('.hn').value.trim(),k:num(d.querySelector('.hk').value),
+    hits:$$('.hit').map(d=>({name:d.querySelector('.hn').value.trim(),detail:d.querySelector('.hd').value.trim(),k:num(d.querySelector('.hk').value),
       v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value),kind:d.dataset.kind||'card',items:d._items||null})).filter(h=>h.name||isFinite(h.k))};
 }
 function writeState(s){
@@ -390,7 +413,7 @@ function writeState(s){
   set('#site',s.site||'');set('#pack',s.pack||'');set('#price',s.price);set('#remain',s.N);set('#miss',s.miss||'');
   set('#budget',s.budget);set('#total0',s.N0);set('#lastone',s.lastone||'');set('#fee',s.fee||'');set('#bonusV',s.bonusV||'');set('#bonusR',s.bonusR);
   $$('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.v===(s.mode||'hyper')));
-  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,kind:h.kind,items:h.items,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));ensureBlank();
+  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,detail:h.detail,kind:h.kind,items:h.items,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));ensureBlank();
   if(s.N0||s.lastone||s.fee||s.bonusV)$('details.more').open=true;
 }
 
@@ -556,7 +579,7 @@ function run(){
   try{history.replaceState(null,'','#'+encodeURIComponent(JSON.stringify(compact(s))))}catch(e){}
 }
 const compact=s=>({site:s.site,pack:s.pack,price:s.price,N:s.N,mode:s.mode,miss:s.miss,budget:s.budget,N0:isFinite(s.N0)?s.N0:null,
-  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,kind:h.kind||'card',k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null,items:h.items||undefined}))});
+  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,detail:h.detail||undefined,kind:h.kind||'card',k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null,items:h.items||undefined}))});
 $('#go').onclick=run;
 $('#back').onclick=()=>{$('#result').style.display='none';$('#tab-calc').classList.remove('hide');$('#ctaRes').classList.add('hide');$('#ctaCalc').classList.remove('hide');window.scrollTo({top:0})};
 $('#sim1').onclick=()=>{
@@ -647,7 +670,7 @@ let upOn=false;
 fetch('/api/extract').then(r=>r.json()).then(j=>{upOn=!!j.enabled;upState()}).catch(()=>upState());
 function upState(){
   $('#upLbl').classList.toggle('off',!upOn);$('#upFile').disabled=!upOn;$('#upUrl').disabled=!upOn;$('#upGo').disabled=!upOn;
-  $('#upSub').textContent=upOn?'사진을 여기로 끌어오거나, 눌러서 첨부하세요. 붙여넣기(Ctrl+V)도 돼요 (최대 3장)':'준비 중이에요. 지금은 아래 칸에 직접 넣어 주세요.';
+  $('#upSub').textContent=upOn?'끌어오기 · 눌러서 첨부 · 붙여넣기 (최대 3장)':'준비 중이에요. 지금은 아래 칸에 직접 넣어 주세요.';
 }
 function shrink(file){return new Promise((ok,no)=>{
   const img=new Image(),u=URL.createObjectURL(file);
@@ -706,8 +729,9 @@ function applyFields(f,url){
   if(f.fixed_probability===true)s.mode='fixed';else if(f.fixed_probability===false)s.mode='hyper';
   const old=Object.fromEntries(s.hits.map(h=>[h.name,h.v]));
   if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>{const its=Array.isArray(h.items)?h.items:[];
-    const nm=its.length?`${h.name} · ${cleanQ(its[0].name)}${its.length>1?` 외 ${its.length-1}종`:''}`:h.name;
-    return {name:nm,kind:KINDS[h.kind]?h.kind:'card',items:its.length?its:null,k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[nm])?old[nm]:(h.value??NaN)}});got.push('히트 '+f.hits.length+'개')}
+    const nm=its.length?h.name:(h.card_name||h.name);
+    const det=its.length?'':[h.rarity,h.set,h.language].filter(Boolean).join(' ');
+    return {name:nm,detail:det,kind:KINDS[h.kind]?h.kind:'card',items:its.length?its:null,k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[nm])?old[nm]:(h.value??NaN)}});got.push('히트 '+f.hits.length+'개')}
   else miss.push('히트 목록');
   if(isFinite(f.last_one_price)&&f.last_one_price>0)s.lastone=f.last_one_price;
   if(!s.site&&url){try{s.site=new URL(url).hostname.replace(/^www\./,'')}catch(e){}}
@@ -719,6 +743,14 @@ function applyFields(f,url){
   toast('자동으로 채웠어요');
 }
 
+$('#warnBtn').onclick=()=>$('#warnbox').classList.toggle('open');
+function addHelpBadges(){
+  $$('.card').forEach(c=>{if(c.querySelector('.qb')||!c.querySelector('.hint,.small'))return;
+    const h=c.querySelector('h2')||c.querySelector('summary');if(!h)return;
+    const b=document.createElement('button');b.type='button';b.className='qb';b.textContent='?';b.setAttribute('aria-label','설명 보기');
+    b.onclick=e=>{e.preventDefault();e.stopPropagation();c.classList.toggle('help')};h.append(b)});
+}
+addHelpBadges();
 (function init(){
   let s=null;
   if(location.hash.length>2){try{s=JSON.parse(decodeURIComponent(location.hash.slice(1)))}catch(e){}}
