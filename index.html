@@ -69,7 +69,17 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .kinds button{border:0;height:30px;padding:0 12px;border-radius:99px;background:var(--card);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
 .kinds button.on{background:var(--accent-ink);color:var(--accent)}
 .hit .hd{background:var(--card);height:40px;font-size:14px;font-weight:500;margin-bottom:8px}
-.lk{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.lk{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.lnk{display:inline-flex;align-items:center;gap:2px;height:30px;padding:0 6px 0 4px;border-radius:9px;background:var(--input);color:var(--sub);
+  text-decoration:none;font-size:12px;font-weight:800}
+.lnk img{width:20px;height:20px;border-radius:5px;display:block}
+.lnk:hover{background:var(--line)}
+.item .cn{border:0;background:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;text-align:left}
+.item .cn::after{content:" ▾";color:var(--faint);font-size:10px}
+.item .nm.open .cn::after{content:" ▴"}
+.item .det{display:none;font-size:12px;color:var(--faint);margin-top:4px;line-height:1.4}
+.item .det span{color:var(--faint);opacity:.8}
+.item .nm.open .det{display:block}
 .pav.kr{background:#F4F4F4;color:#222}
 details.items{margin-top:10px;background:var(--card);border-radius:12px;padding:4px 12px}
 details.items summary{list-style:none;cursor:pointer;font-size:14px;font-weight:700;color:var(--sub);padding:8px 0;display:flex;justify-content:space-between}
@@ -103,6 +113,10 @@ details.more .inner{padding-top:12px}
 .mascot{position:absolute;right:16px;top:14px;width:96px;height:90px;display:none}
 .mascot svg{width:100%;height:100%}
 .v-no .mascot{display:block;animation:dd-shake .5s ease-in-out 2}
+.v-go .mascot{display:block;animation:dd-hop .6s ease-in-out 2}
+.mascot img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+@keyframes dd-hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.v-go h2,.v-go .badge{margin-right:96px}
 @keyframes dd-shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
 .v-no h2,.v-no .badge{margin-right:96px}
 .verdict .badge{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:15px;padding:6px 12px;border-radius:999px}
@@ -347,12 +361,13 @@ const KINDS={
 const cleanQ=n=>String(n).replace(/^포켓몬\s*TCG\s*/,'').replace(/\s+/g,' ').trim();
 const guessKind=n=>/박스|box/i.test(n)?'box':/팩|pack/i.test(n)?'pack':'card';
 const links=(kind,card,full)=>{const o=KINDS[kind]||KINDS.card;let h='';
-  if(o.pav&&card)h+=`<a class="pav" target="_blank" rel="noopener" href="${PAV(card)}">파빌리온 ↗</a>`;
-  if(kind!=='etc'&&(full||card))h+=`<a class="pav kr" target="_blank" rel="noopener" href="${KREAM(cleanQ(full||card))}">KREAM ↗</a>`;
+  if(o.pav&&card)h+=`<a class="lnk" target="_blank" rel="noopener" href="${PAV(card)}" title="파빌리온에서 시세 보기"><img src="img/pavilion.png" alt="파빌리온">↗</a>`;
+  if(kind!=='etc'&&(full||card))h+=`<a class="lnk" target="_blank" rel="noopener" href="${KREAM(cleanQ(full||card))}" title="KREAM에서 시세 보기"><img src="img/kream.png" alt="KREAM">↗</a>`;
   return h};
 function itemRow(it){
   const card=it.card||cleanQ(it.name),k=/카드/.test(it.name)&&!/카드팩/.test(it.name)?'card':guessKind(it.card||it.name),det=[it.rarity,it.set,it.language].filter(Boolean).join(' · ');
-  return `<div class="item"><div class="nm"><b>${esc(card)}</b>${det?` <small>${esc(det)}</small>`:''} <small>× ${it.qty||1}</small></div>
+  return `<div class="item"><div class="nm"><button type="button" class="cn">${esc(card)}</button>
+      <div class="det">${[det,`× ${it.qty||1}`].filter(Boolean).map(esc).join(' · ')}<br><span>${esc(it.name)}</span></div></div>
     <div class="unit"><input class="in ip" inputmode="numeric" placeholder="가격" value="${isFinite(it.price)&&it.price!=null?Number(it.price).toLocaleString('ko-KR'):''}"><em>원</em></div>
     <div class="lk">${links(k,k==='card'?card:'',it.name)}</div></div>`;
 }
@@ -376,7 +391,8 @@ function hitRow(h={}){
   d.dataset.kind=kind;d._items=h.items&&h.items.length?h.items.map(i=>({...i})):null;
   if(d._items){const recalc=()=>{let q=0,sum=0;d.querySelectorAll('.ip').forEach((el,i)=>{const p=num(el.value),qq=d._items[i].qty||1;d._items[i].price=isFinite(p)?p:null;if(isFinite(p)){q+=qq;sum+=p*qq}});
       if(q)d.querySelector('.hv').value=Math.round(sum/q).toLocaleString('ko-KR')};
-    d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});}
+    d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});
+    d.querySelectorAll('.cn').forEach(b=>b.onclick=()=>b.parentElement.classList.toggle('open'));}
   const nameI=d.querySelector('.hn'),detI=d.querySelector('.hd'),vI=d.querySelector('.hv'),lk=d.querySelector('.hl');
   const upd=()=>{const o=KINDS[d.dataset.kind];
     nameI.placeholder=d._items?'등급 이름 (예: 1등)':o.namePh;detI.placeholder=o.detPh;vI.placeholder=o.valPh;
@@ -508,7 +524,7 @@ const V={go:['추천','지금 사도 괜찮아요','한 번의 기대값이 가�
 function render(r){
   const s=r.s;
   $('#vCard').className='verdict v-'+r.v;
-  $('#vMascot').innerHTML=r.v==='no'?SHOCK_SVG:'';
+  $('#vMascot').innerHTML=r.v==='no'?SHOCK_SVG:r.v==='go'?'<img src="img/dedenne-happy.jpg" alt="">':'';
   $('#vBadge').textContent=V[r.v][0];
   $('#vTitle').textContent=V[r.v][1];
   let desc=V[r.v][2];
