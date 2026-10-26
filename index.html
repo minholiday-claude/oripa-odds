@@ -687,13 +687,8 @@ function applyFields(f,url){
   ['#site','#pack','#price','#remain'].forEach((id,i)=>{if([f.site,f.pack,f.price,f.remaining][i]!=null)$(id).classList.add('filled')});
   $$('.hit .hn,.hit .hk').forEach(el=>{if(el.value)el.classList.add('filled')});
   setTimeout(()=>$$('.filled').forEach(el=>el.classList.remove('filled')),6000);
-  let t=`채운 항목: ${got.join(', ')||'없음'}.`;
-  if(miss.length)t+=` 못 찾은 항목: ${miss.join(', ')}.`;
-  const priced=(f.hits||[]).filter(h=>h.value!=null).length;
-  if(priced)t+=` 시세 칸에는 사이트가 적은 상품 가격의 등급별 평균을 넣었어요. 사이트 가격은 실제 시세보다 높게 적힌 경우가 많으니 파빌리온 등으로 꼭 확인해 주세요.`;
-  else t+=' 숫자가 화면과 같은지 꼭 확인하고, 히트별 시세는 파빌리온에서 넣어 주세요.';
-  if(f.last_one)t+=` 라스트원: ${f.last_one}.`;if(f.bonus)t+=` 보너스: ${f.bonus}.`;
-  upMsg(t);toast('자동으로 채웠어요. 숫자를 확인해 주세요');
+  if(miss.length)upMsg(`못 찾은 항목: ${miss.join(', ')}`);else $('#upMsg').classList.add('hide');
+  toast('자동으로 채웠어요');
 }
 
 (function init(){
