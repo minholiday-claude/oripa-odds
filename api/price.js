@@ -2,7 +2,7 @@
 // 1) 카드명(+등급)으로 파빌리온 검색 → 후보  2) 언어로 1차 거르기
 // 3) Claude가 상품 전체 이름(세트·레어도·버전)과 맞는 후보를 고름  4) 그 등급 가격(USD) × 환율
 const PAV = 'https://pavilion-tcg.com';
-const MODEL = 'claude-haiku-4-5-20251001';
+const MODEL = 'claude-sonnet-5-5';  // 일본어·영어 세트명 대조가 필요해서 매칭은 더 정확한 모델로
 const MAX_ITEMS = 40;
 const MAX_CANDS = 30;
 const DAILY_LIMIT = 30;
