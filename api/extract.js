@@ -32,7 +32,7 @@ const TOOL = {
       pack: { type: ['string', 'null'], description: '오리파 상품 이름' },
       price: { type: ['number', 'null'], description: '한 번(1회/1자리/1팩) 참여 가격, 원 단위 숫자' },
       remaining: { type: ['number', 'null'], description: '화면에 "남은 수"가 직접 적혀 있을 때만. 계산하지 말 것' },
-      opened: { type: ['number', 'null'], description: '개봉(판매·참여)된 수가 적혀 있으면 그 숫자' },
+      opened: { type: ['number', 'null'], description: '이미 개봉(판매·참여)된 수. "개봉 현황 33 / 2,800"이면 33' },
       total: { type: ['number', 'null'], description: '처음 전체 횟수(자리 수). "개봉 X / Y" 표기의 Y. 제목의 "단 N구" 같은 홍보 문구 숫자는 쓰지 말 것' },
       fixed_probability: { type: ['boolean', 'null'], description: '뽑을 때마다 확률이 늘 같은 방식(무한 뽑기)이라고 명시되면 true. 남은 수량·남은 자리가 표시되고 줄어드는 방식이면 false. "참여 순서와 무관하게 확률 동일" 같은 문구는 true의 근거가 아님' },
       hits: {
@@ -184,8 +184,13 @@ function finish(f) {
     const sumInit = f.hits.reduce((a, h) => a + h.initial, 0);
     if (!isFinite(f.total) || f.total < sumInit) f.total = sumInit;
   }
-  // 전체와 개봉 수가 있으면 남은 횟수는 항상 직접 계산
-  if (isFinite(f.total) && isFinite(f.opened) && f.total >= f.opened) f.remaining = f.total - f.opened;
+  // 남은 횟수: 후보 중 '등급별 남은 수 합' 이상이고 전체 이하인 값 (개봉/남은 수가 뒤바뀐 경우까지 보정)
+  const sumRem = (f.hits || []).reduce((a, h) => a + (isFinite(h.remaining) ? h.remaining : 0), 0);
+  const ok = v => isFinite(v) && v >= sumRem && (!isFinite(f.total) || v <= f.total);
+  const cands = [isFinite(f.total) && isFinite(f.opened) ? f.total - f.opened : NaN, f.remaining, isFinite(f.total) ? f.opened : NaN];
+  const pick = cands.find(ok);
+  if (pick != null) f.remaining = pick;
+  if (isFinite(f.total) && isFinite(f.remaining)) f.opened = f.total - f.remaining;
   if (Array.isArray(f.hits)) {
     // 등급별 남은 수가 처음보다 줄어 있으면 '남은 수가 줄어드는' 방식
     if (f.hits.some(h => isFinite(h.remaining) && isFinite(h.initial) && h.remaining < h.initial)) f.fixed_probability = false;
@@ -225,24 +230,23 @@ module.exports = async function handler(req, res) {
       if (!u) return res.status(400).json({ error: '열 수 없는 링크예요. https:// 로 시작하는 오리파 페이지 주소를 넣어 주세요' });
       let html;
       try { html = await fetchPage(u); } catch { return res.status(422).json({ error: '페이지를 열지 못했어요. 스크린샷으로 올려 주세요' }); }
-      let { visible, text } = pageText(html); let rendered = 'no', renderErr = null;
+      let { visible, text } = pageText(html);
       // 내용이 비어 있거나 '불러오는 중'이면 진짜 브라우저로 열어서 다시 읽기
       if (visible.length < 1500 || /불러오는 중|loading/i.test(visible.slice(0, 400))) {
         try {
           const { renderText } = require('./_render');
           const r = await renderText(u.href);
           const body = (r.body || '').split('\n').map(x => x.trim()).filter(Boolean).join(' | ');
-          rendered = 'tried:' + body.length;
           if (body.length > visible.length) {
             visible = body;
-            text = [`제목: ${r.title}`, r.ld ? `상품 데이터(JSON-LD): ${r.ld}` : '', `본문: ${body}`].filter(Boolean).join('\n').slice(0, MAX_TEXT);
+            text = [`제목: ${r.title}`, r.ld ? `상품 데이터(JSON-LD): ${r.ld}` : '', `본문: ${body}`, `처음 받은 페이지 글자(가격·버튼 문구 참고용): ${visible.slice(0, 1500)}`].filter(Boolean).join('\n').slice(0, MAX_TEXT);
           }
-        } catch (e) { renderErr = String(e && e.message || e).slice(0, 200); }
+        } catch (e) { /* 브라우저로도 못 읽으면 아래 안내 */ }
       }
       if (visible.length < 300) return res.status(422).json({ error: '이 사이트는 링크로 내용을 읽을 수 없어요. 스크린샷으로 올려 주세요' });
       const f = await askClaude([{ type: 'text', text: pagePrompt(u.href, text) }]);
       if (!f) return res.status(502).json({ error: '페이지에서 정보를 찾지 못했어요' });
-      return res.status(200).json({ fields: finish(f), source: 'url', rendered, renderErr });
+      return res.status(200).json({ fields: finish(f), source: 'url' });
     }
 
     // 스크린샷
