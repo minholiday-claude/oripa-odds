@@ -128,6 +128,8 @@ details.more .inner{padding-top:12px}
 .up b{display:block;font-size:17px}
 .up span{font-size:14px;color:var(--faint)}
 .up.off{opacity:.55;cursor:default}
+#upCard{border:2px dashed var(--line);transition:border-color .15s,background .15s}
+#upCard.drag{border-color:var(--accent-text);background:var(--accent-l)}
 .thumbs{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .thumbs img{width:64px;height:64px;object-fit:cover;border-radius:12px;background:var(--input)}
 .upmsg{font-size:14px;color:var(--sub);margin-top:12px}
@@ -153,7 +155,7 @@ details.more .inner{padding-top:12px}
   <div class="card" id="upCard">
     <label class="up" id="upLbl">
       <div class="ic">📷</div>
-      <div><b>스크린샷으로 자동 채우기</b><span id="upSub">오리파 화면 캡처를 올리면 숫자를 읽어 칸을 채워요 (최대 3장)</span></div>
+      <div><b>스크린샷으로 자동 채우기</b><span id="upSub">사진을 여기로 끌어오거나, 눌러서 첨부하세요. 붙여넣기(Ctrl+V)도 돼요 (최대 3장)</span></div>
       <input type="file" id="upFile" accept="image/*" multiple hidden>
     </label>
     <div class="thumbs" id="thumbs"></div>
@@ -547,7 +549,7 @@ let upOn=false;
 fetch('/api/extract').then(r=>r.json()).then(j=>{upOn=!!j.enabled;upState()}).catch(()=>upState());
 function upState(){
   $('#upLbl').classList.toggle('off',!upOn);$('#upFile').disabled=!upOn;
-  $('#upSub').textContent=upOn?'오리파 화면 캡처를 올리면 숫자를 읽어 칸을 채워요 (최대 3장)':'준비 중이에요. 지금은 아래 칸에 직접 넣어 주세요.';
+  $('#upSub').textContent=upOn?'사진을 여기로 끌어오거나, 눌러서 첨부하세요. 붙여넣기(Ctrl+V)도 돼요 (최대 3장)':'준비 중이에요. 지금은 아래 칸에 직접 넣어 주세요.';
 }
 function shrink(file){return new Promise((ok,no)=>{
   const img=new Image(),u=URL.createObjectURL(file);
@@ -557,8 +559,20 @@ function shrink(file){return new Promise((ok,no)=>{
     const d=c.toDataURL('image/jpeg',0.85);ok({type:'image/jpeg',data:d.split(',')[1],preview:d})};
   img.onerror=()=>no(new Error('이미지를 열 수 없어요'));img.src=u;})}
 function upMsg(t,html){const m=$('#upMsg');m.classList.remove('hide');if(html)m.innerHTML=t;else m.textContent=t}
-$('#upFile').onchange=async e=>{
-  const files=[...e.target.files].slice(0,3);e.target.value='';if(!files.length)return;
+$('#upFile').onchange=e=>{const f=[...e.target.files];e.target.value='';handleFiles(f)};
+const upCard=$('#upCard');
+['dragenter','dragover'].forEach(t=>upCard.addEventListener(t,e=>{e.preventDefault();if(upOn)upCard.classList.add('drag')}));
+['dragleave','drop'].forEach(t=>upCard.addEventListener(t,e=>{e.preventDefault();if(t==='dragleave'&&upCard.contains(e.relatedTarget))return;upCard.classList.remove('drag')}));
+upCard.addEventListener('drop',e=>handleFiles([...e.dataTransfer.files]));
+// 카드 밖에 떨어뜨려도 브라우저가 사진을 열지 않게
+window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
+document.addEventListener('paste',e=>{if(!$('#tab-calc')||$('#tab-calc').classList.contains('hide'))return;
+  const f=[...(e.clipboardData?.files||[])].filter(x=>x.type.startsWith('image/'));if(f.length){e.preventDefault();handleFiles(f)}});
+async function handleFiles(all){
+  if(!upOn){toast('스크린샷 읽기가 아직 준비 중이에요');return}
+  const files=all.filter(f=>f.type.startsWith('image/')).slice(0,3);
+  if(!files.length){toast('사진 파일만 올릴 수 있어요');return}
+  if(all.length>3)toast('처음 3장만 읽을게요');
   let ims;try{ims=await Promise.all(files.map(shrink))}catch(err){upMsg(err.message);return}
   $('#thumbs').innerHTML=ims.map(i=>`<img src="${i.preview}" alt="">`).join('');
   upMsg('<span class="spin"></span>화면을 읽고 있어요… (10초 정도 걸려요)',true);
@@ -568,7 +582,7 @@ $('#upFile').onchange=async e=>{
     if(!r.ok){upMsg(j.error||'읽지 못했어요. 직접 넣어 주세요.');return}
     applyFields(j.fields);
   }catch(err){upMsg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.')}
-};
+}
 function applyFields(f){
   const s=readState(),got=[],miss=[];
   const take=(key,val,label)=>{if(val!=null&&val!==''&&!(typeof val==='number'&&!isFinite(val))){s[key]=val;got.push(label)}else miss.push(label)};
