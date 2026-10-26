@@ -80,6 +80,7 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .item .cn::after{content:" ▾";color:var(--faint);font-size:10px}
 .item .nm.open .cn::after{content:" ▴"}
 .item .det{display:none;font-size:12px;color:var(--faint);margin-top:4px;line-height:1.4}
+.vnote{font-size:12px;color:var(--orange);font-weight:600;margin-top:6px}
 .miss-note{font-size:12px;font-weight:700;color:var(--orange);margin:8px 2px 0}
 .ip.pp{box-shadow:inset 0 0 0 1.5px var(--accent-text)!important}
 .ip.pw{box-shadow:inset 0 0 0 1.5px var(--orange)!important}
@@ -288,6 +289,7 @@ details.more .inner{padding-top:12px}
     <span class="badge" id="vBadge"></span>
     <h2 id="vTitle"></h2>
     <p id="vDesc"></p>
+    <p class="vnote hide" id="vNote"></p>
     <div class="big">
       <div><span>환급률 (판정 기준)</span><b id="kRtp">-</b></div>
       <div><span id="kWinLbl">승률</span><b id="kWin">-</b></div>
@@ -401,7 +403,7 @@ function hitRow(h={}){
   if(d._items){const recalc=()=>{let q=0,sum=0,mq=0,mn=0;d.querySelectorAll('.ip').forEach((el,i)=>{const p=num(el.value),qq=d._items[i].qty||1;d._items[i].price=isFinite(p)?p:null;if(isFinite(p)){q+=qq;sum+=p*qq}else{mq+=qq;mn++}});
       if(q)d.querySelector('.hv').value=Math.round(sum/q).toLocaleString('ko-KR');
       d._missing=mq;const n=d.querySelector('.miss-note');
-      n.classList.toggle('hide',!mq);n.textContent=mq?`가격 없는 상품 ${mn}종(${mq.toLocaleString()}개) · 상자는 KREAM 버튼으로 시세를 확인해 넣어 주세요`:''};
+      n.classList.toggle('hide',!mq);n.textContent=mq?`시세 없는 상품 ${mn}종(${mq.toLocaleString()}개)은 빼고 평균을 냈어요`:''};
     d.querySelectorAll('.ip').forEach(el=>{el.addEventListener('input',recalc);el.addEventListener('blur',()=>fmtInput(el))});
     d.querySelectorAll('.cn').forEach(b=>b.onclick=()=>b.parentElement.classList.toggle('open'));
     setTimeout(recalc,0);}
@@ -434,7 +436,7 @@ function readState(){
     N0:num($('#total0').value),lastone:num($('#lastone').value)||0,fee:num($('#fee').value)||0,
     bonusV:num($('#bonusV').value)||0,bonusR:num($('#bonusR').value),
     hits:$$('.hit').map(d=>({name:d.querySelector('.hn').value.trim(),detail:d.querySelector('.hd').value.trim(),k:num(d.querySelector('.hk').value),
-      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value),kind:d.dataset.kind||'card',items:d._items||null,missing:d._missing||0})).filter(h=>h.name||isFinite(h.k))};
+      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value),kind:d.dataset.kind||'card',items:d._items||null,missing:d._missing||0,low:(d._items||[]).filter(i=>i.low).length})).filter(h=>h.name||isFinite(h.k))};
 }
 function writeState(s){
   const set=(id,v)=>{$(id).value=(v==null||!isFinite(v)&&typeof v==='number')?'':(typeof v==='number'?v.toLocaleString('ko-KR'):v)};
@@ -483,14 +485,21 @@ function analyze(s){
   if(errs.length)return {err:errs.join(', ')+'을(를) 넣어 주세요.'};
   const K=s.hits.reduce((a,h)=>a+h.k,0);
   if(K>s.N)return {err:'히트 수의 합이 남은 횟수보다 많아요. 숫자를 확인해 주세요.'};
-  const priced=s.hits.every(h=>isFinite(h.v)&&h.v>=0&&!h.missing);
+  // 시세가 하나라도 있으면 판정. 빠진 정보는 짧게 알려 줌
+  const priced=s.hits.some(h=>isFinite(h.v)&&h.v>0);
   const missingQty=s.hits.reduce((a,h)=>a+(h.missing||0),0);
+  const notes=[];
+  s.hits.forEach(h=>{const nm=h.name||'히트';
+    if(!(isFinite(h.v)&&h.v>=0))notes.push(`${nm} 시세 없음(0원으로 계산)`);
+    else if(h.missing)notes.push(`${nm} 일부 상품 시세 없음(${h.missing.toLocaleString()}개 빼고 평균)`);});
+  const lowN=s.hits.reduce((a,h)=>a+(h.low||0),0);if(lowN)notes.push(`대략 맞춘 시세 ${lowN}개`);
+  if(!s.miss&&s.N>s.hits.reduce((a,h)=>a+(h.k||0),0))notes.push('꽝 가치 0원으로 계산');
   const H=s.hits.reduce((a,h)=>a+h.k*(isFinite(h.v)?h.v:0),0);
   const ev=(H+(s.N-K)*s.miss)/s.N, rtp=ev/s.price;
   const budget=isFinite(s.budget)&&s.budget>0?s.budget:100000;
   const n=Math.max(1,Math.min(Math.floor(Math.max(0,budget-s.fee)/s.price),s.mode==='hyper'?s.N:1e9));
   const cost=n*s.price+s.fee;
-  const r={s,K,priced,ev,rtp,n,cost,budget,missingQty};
+  const r={s,K,priced,ev,rtp,n,cost,budget,missingQty,notes};
   // 확률
   r.single=s.hits.map(h=>({name:h.name||'(이름 없음)',p:h.k/s.N,k:h.k}));
   r.anyHitN=pAtLeastOne(s.N,K,n,s.mode);
@@ -541,11 +550,12 @@ function render(r){
   $('#vBadge').textContent=V[r.v][0];
   $('#vTitle').textContent=V[r.v][1];
   let desc=V[r.v][2];
-  if(r.v==='none'&&r.missingQty)desc=`가격이 없는 상품 ${r.missingQty.toLocaleString()}개가 있어요. 박스·팩 시세를 넣으면 판정해 드릴게요.`;
+
   if(r.v==='go'&&r.rtp<1&&r.bonusGo)desc=`다음 확정 보너스까지 ${s.bonusR.toLocaleString()}회를 모두 사면 평균 ${won(r.bonusNet)} 이득이에요. 다른 사람이 먼저 사면 보너스를 놓칠 수 있어요.`;
   if(r.v==='no'&&r.trend&&r.trend.topRatio<=0.5&&r.rtp>=0.85)desc='가장 좋은 히트가 많이 빠져서 처음 확률의 절반 이하예요.';
   if(r.waitWhy==='up')desc+=' 처음보다 좋아지는 중이에요.';
   $('#vDesc').textContent=desc;
+  $('#vNote').classList.toggle('hide',!r.notes.length);$('#vNote').textContent=r.notes.length?'정보 부족 · '+r.notes.join(' · '):'';
   $('#kRtp').textContent=r.priced?pct(r.rtp,1):'-';
   $('#kWinLbl').textContent=`승률 (${r.n.toLocaleString()}번 · ${won(r.cost)})`;
   $('#kWin').textContent=r.priced?pct(r.win,1):'-';
@@ -810,7 +820,7 @@ async function autoPrice(miss=[]){
     rows.forEach((d,ri)=>{
       const ips=d.querySelectorAll('.ip'),dets=d.querySelectorAll('.item .det');
       d._items.forEach((it,ii)=>{const p=j.prices[ri+'-'+ii];if(!p||!p.found)return;
-        it.price=p.price;it.src='pavilion';it.match=p.match;
+        it.price=p.price;it.src='pavilion';it.match=p.match;it.low=p.confidence==='low'||!!p.gradeFallback;
         const w=p.confidence==='low'||p.gradeFallback;ok++;if(w)warn++;
         ips[ii].value=p.price.toLocaleString('ko-KR');ips[ii].classList.add(w?'pw':'pp');
         dets[ii].insertAdjacentHTML('beforeend',`<br><em class="src">파빌리온 · ${esc(p.match)}${p.grade?' · '+esc(p.grade):''}${p.gradeFallback?' (원하는 등급 시세 없음)':''}${p.confidence==='low'?' · 확인 필요':''}</em>`);
