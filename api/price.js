@@ -4,7 +4,7 @@
 const PAV = 'https://pavilion-tcg.com';
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_ITEMS = 40;
-const MAX_CANDS = 30;
+const MAX_CANDS = 45;
 const DAILY_LIMIT = 30;
 
 const hitsByIp = new Map();
@@ -171,7 +171,8 @@ module.exports = async function handler(req, res) {
     reqs.forEach(r => qmap.set(`${r.card}|${r.gk || ''}|${r.lk || ''}`, null));
     const qkeys = [...qmap.keys()];
     // 검색어를 차례로 시도하고, 같은 언어 결과가 나오면 거기서 멈춤 (관계없는 후보가 섞이지 않게)
-    const unionOf = async (qs, g, lk) => { const seen = new Map(); for (const q of qs) { for (const it of await cached(q, g)) if (!seen.has(it.id)) seen.set(it.id, it); if ([...seen.values()].some(x => !lk || x.language === lk)) break; } return [...seen.values()]; };
+    // 원래 이름·& 정리·접두어 뗀 이름(앞 3개)은 항상 합치고, 기본 이름 검색은 그래도 없을 때만
+    const unionOf = async (qs, g, lk) => { const seen = new Map(); for (let k = 0; k < qs.length; k++) { for (const it of await cached(qs[k], g)) if (!seen.has(it.id)) seen.set(it.id, it); if (k >= 2 && [...seen.values()].some(x => !lk || x.language === lk)) break; } return [...seen.values()]; };
     await pool(qkeys, 4, async k => {
       const [card, gk, lk] = k.split('|');
       const qs = queryVariants(card);
