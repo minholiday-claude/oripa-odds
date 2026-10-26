@@ -115,6 +115,8 @@ details.more .inner{padding-top:12px}
 .v-no .mascot{display:block;animation:dd-shake .5s ease-in-out 2}
 .v-go .mascot{display:block;animation:dd-hop .6s ease-in-out 2}
 .mascot img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.mascot img.cut{object-fit:contain;border-radius:0}
+.mascot .sweat{position:absolute;right:-4px;top:-6px;font-style:normal;font-size:22px}
 @keyframes dd-hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .v-go h2,.v-go .badge{margin-right:96px}
 @keyframes dd-shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
@@ -185,7 +187,7 @@ details.more .inner{padding-top:12px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--accent-l);border-top-color:var(--accent-text);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .loading{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 6px}
-.loading .ddimg{width:110px;height:110px;border-radius:50%;object-fit:cover;box-shadow:0 4px 14px rgba(0,0,0,.12);animation:dd-spin 1.4s cubic-bezier(.45,.05,.55,.95) infinite}
+.loading .ddimg{width:110px;height:110px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));animation:dd-spin 1.4s cubic-bezier(.45,.05,.55,.95) infinite}
 .loading b{font-size:17px;font-weight:700;color:var(--sub)}
 .loading b i{font-style:normal;display:inline-block;animation:dd-dot 1.2s infinite}
 .loading b i:nth-child(2){animation-delay:.2s}.loading b i:nth-child(3){animation-delay:.4s}
@@ -524,7 +526,7 @@ const V={go:['추천','지금 사도 괜찮아요','한 번의 기대값이 가�
 function render(r){
   const s=r.s;
   $('#vCard').className='verdict v-'+r.v;
-  $('#vMascot').innerHTML=r.v==='no'?SHOCK_SVG:r.v==='go'?'<img src="img/dedenne-happy.jpg" alt="">':'';
+  $('#vMascot').innerHTML=r.v==='no'?'<img class="cut" src="img/dedenne-sad.png" alt=""><i class="sweat">💦</i>':r.v==='go'?'<img src="img/dedenne-happy.jpg" alt="">':'';
   $('#vBadge').textContent=V[r.v][0];
   $('#vTitle').textContent=V[r.v][1];
   let desc=V[r.v][2];
@@ -686,7 +688,7 @@ const FACE_SHOCK=`<circle cx="48" cy="62" r="5.2" fill="#fff" stroke="#1E1E1E" s
   <path d="M96 40 C99 46,99 50,96 52 C93 50,93 46,96 40 Z" fill="#8FD3FF"/>`;
 const LOADER_SVG=dd(FACE_OK);
 const SHOCK_SVG=dd(FACE_SHOCK);
-const LOADER_IMG='<img class="ddimg" src="img/dedenne-happy.jpg" alt="">';
+const LOADER_IMG='<img class="ddimg" src="img/dedenne.png" alt="">';
 const loadingHtml=sub=>`<div class="loading">${LOADER_IMG}<b>로딩중<i>.</i><i>.</i><i>.</i></b><span>${sub}</span></div>`;
 
 /* ---------- 스크린샷 자동 채우기 ---------- */
