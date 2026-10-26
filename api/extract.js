@@ -198,11 +198,11 @@ function finish(f) {
     const norm = t => String(t || '').replace(/\s+/g, '').toLowerCase();
     f.hits = f.hits.map(h => {
       if (!h.items) h.items = prizes.filter(p => norm(p.tier) === norm(h.name));
-      const its = (h.items || []).filter(i => isFinite(i.price) && i.price >= 0);
+      const its = (h.items || []).filter(i => typeof i.price === 'number' && Number.isFinite(i.price) && i.price > 0);
       const q = its.reduce((a, i) => a + (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const sum = its.reduce((a, i) => a + i.price * (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const list = (h.items || []).filter(i => i && i.name).slice(0, 40)
-        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card, rarity, set: i.set || null, language: i.language || null, price: isFinite(i.price) ? i.price : null, qty: isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
+        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card, rarity, set: i.set || null, language: i.language || null, price: typeof i.price === 'number' && i.price > 0 ? i.price : null, qty: Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
       const out = { name: h.name, card_name: h.card_name || null, rarity: h.rarity || null, set: h.set || null, language: h.language || null, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
       if (q > 0) out.value = Math.round(sum / q);   // 등급 안 상품 가격의 평균 (사이트 표기 가격)
       return out;

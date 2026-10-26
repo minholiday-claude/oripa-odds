@@ -758,7 +758,7 @@ function applyFields(f,url){
   if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>{const its=Array.isArray(h.items)?h.items:[];
     const nm=its.length?h.name:(h.card_name||h.name);
     const det=its.length?'':[h.rarity,h.set,h.language].filter(Boolean).join(' ');
-    return {name:nm,detail:det,kind:KINDS[h.kind]?h.kind:'card',items:its.length?its:null,k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[nm])?old[nm]:(h.value??NaN)}});got.push('히트 '+f.hits.length+'개')}
+    return {name:nm,detail:det,kind:KINDS[h.kind]?h.kind:'card',items:its.length?its:null,k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[nm])?old[nm]:(h.value>0?h.value:NaN)}});got.push('히트 '+f.hits.length+'개')}
   else miss.push('히트 목록');
   if(isFinite(f.last_one_price)&&f.last_one_price>0)s.lastone=f.last_one_price;
   if(isFinite(f.miss_value)&&f.miss_value>=0)s.miss=f.miss_value;
