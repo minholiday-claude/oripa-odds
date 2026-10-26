@@ -204,12 +204,16 @@ function finish(f) {
       const q = its.reduce((a, i) => a + (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const sum = its.reduce((a, i) => a + i.price * (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const list = (h.items || []).filter(i => i && i.name).slice(0, 40)
-        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card: card || String(i.name).replace(/^포켓몬\s*TCG\s*/, '').replace(/\s*\((JP|KR|EN)\)|\s*\([^)]*판\)/g, '').trim(), rarity, variant: i.variant || null, grade: i.grade ? String(i.grade).replace(/\s+/g, '').toUpperCase() : null, set: i.set || null, language: i.language || null, price: typeof i.price === 'number' && i.price > 0 ? i.price : null, qty: Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
+        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card: card || String(i.name).replace(/^포켓몬\s*TCG\s*/, '').replace(/\s*\((JP|KR|EN)\)|\s*\([^)]*판\)/g, '').trim(), rarity, variant: i.variant || null, _fix: 1, grade: i.grade ? String(i.grade).replace(/\s+/g, '').toUpperCase() : null, set: i.set || null, language: i.language || null, price: typeof i.price === 'number' && i.price > 0 ? i.price : null, qty: Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
       const out = { name: h.name, card_name: h.card_name || null, rarity: h.rarity || null, set: h.set || null, language: h.language || null, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
       if (q > 0) out.value = Math.round(sum / q);   // 등급 안 상품 가격의 평균 (사이트 표기 가격)
       return out;
     });
   }
+  (f.hits || []).forEach(h => (h.items || []).forEach(i => {
+    delete i._fix;
+    if (i.variant && i.card && i.card.endsWith(i.variant) && i.card.length > i.variant.length) i.card = i.card.slice(0, -i.variant.length).trim();
+  }));
   delete f.prizes;
   return f;
 }
