@@ -351,7 +351,7 @@ const links=(kind,card,full)=>{const o=KINDS[kind]||KINDS.card;let h='';
   if(kind!=='etc'&&(full||card))h+=`<a class="pav kr" target="_blank" rel="noopener" href="${KREAM(cleanQ(full||card))}">KREAM ↗</a>`;
   return h};
 function itemRow(it){
-  const k=guessKind(it.name),card=it.card||cleanQ(it.name),det=[it.rarity,it.set,it.language].filter(Boolean).join(' · ');
+  const card=it.card||cleanQ(it.name),k=/카드/.test(it.name)&&!/카드팩/.test(it.name)?'card':guessKind(it.card||it.name),det=[it.rarity,it.set,it.language].filter(Boolean).join(' · ');
   return `<div class="item"><div class="nm"><b>${esc(card)}</b>${det?` <small>${esc(det)}</small>`:''} <small>× ${it.qty||1}</small></div>
     <div class="unit"><input class="in ip" inputmode="numeric" placeholder="가격" value="${isFinite(it.price)&&it.price!=null?Number(it.price).toLocaleString('ko-KR'):''}"><em>원</em></div>
     <div class="lk">${links(k,k==='card'?card:'',it.name)}</div></div>`;
