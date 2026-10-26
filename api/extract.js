@@ -167,6 +167,13 @@ async function askClaude(content) {
 }
 
 // 산수는 서버에서 (모델 계산 실수 방지)
+// 카드명 끝에 붙은 레어도 기호 떼기 (파빌리온 검색은 카드명만 넣어야 잡힘)
+const RARITY = /\s+(SAR|SSR|CSR|CHR|SR|HR|UR|AR|RRR|RR|R|U|C|P|S|K|PROMO)$/i;
+function splitRarity(name, rarity) {
+  let n = String(name || '').trim(), r = rarity || null, m;
+  while ((m = n.match(RARITY))) { r = r || m[1].toUpperCase(); n = n.slice(0, m.index).trim(); }
+  return [n || null, r];
+}
 function finish(f) {
   // 라스트원·빈 항목은 히트에서 먼저 제외
   if (Array.isArray(f.hits)) f.hits = f.hits.filter(h => h && h.name && !/라스트\s*원|last\s*one/i.test(h.name) && (h.remaining != null || h.initial != null));
@@ -188,7 +195,7 @@ function finish(f) {
       const q = its.reduce((a, i) => a + (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const sum = its.reduce((a, i) => a + i.price * (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const list = (h.items || []).filter(i => i && i.name).slice(0, 40)
-        .map(i => ({ name: String(i.name).trim(), card: i.card_name || null, rarity: i.rarity || null, set: i.set || null, language: i.language || null, price: isFinite(i.price) ? i.price : null, qty: isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }));
+        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card, rarity, set: i.set || null, language: i.language || null, price: isFinite(i.price) ? i.price : null, qty: isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
       const out = { name: h.name, card_name: h.card_name || null, rarity: h.rarity || null, set: h.set || null, language: h.language || null, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
       if (q > 0) out.value = Math.round(sum / q);   // 등급 안 상품 가격의 평균 (사이트 표기 가격)
       return out;
