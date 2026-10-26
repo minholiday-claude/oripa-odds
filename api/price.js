@@ -127,27 +127,36 @@ module.exports = async function handler(req, res) {
   const isBox = i => i.kind === 'box' || i.kind === 'pack' || (/박스|BOX|팩|pack/i.test(i.card || i.name) && !/카드팩 25주년|프로모 카드/.test(i.name || ''));
   const boxes = all.filter(isBox);
   const items = all.filter(i => !isBox(i) && i.card);
-  // 상자·팩은 KREAM 검색 결과에서 (브라우저로 열어서) 언어·이름이 맞는 상품 가격
-  let boxDebug = '';
+  // 상자·팩은 네이버 쇼핑 공식 검색 API로 (환경변수 NAVER_CLIENT_ID·NAVER_CLIENT_SECRET이 있을 때만)
   const boxJob = (async () => {
-    const res = {};
-    if (!boxes.length) return res;
+    const out = {};
+    if (!boxes.length || !process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) return out;
     const q = b => String(b.card || b.name).replace(/^포켓몬\s*TCG\s*/, '').replace(/\s*\((JP|KR|EN)\)/g, '').replace(/\s*\([^)]*판[^)]*\)/g, '').trim();
-    const qs = [...new Set(boxes.map(q))].slice(0, 8);
-    let found = {};
-    try { found = await require('./_render').kreamSearch(qs); boxDebug = found.__debug || ''; } catch (e) { found = {}; boxDebug = String(e && e.message || e).slice(0, 300); }
-    for (const b of boxes) {
-      const list = found[q(b)] || [];
+    await pool(boxes, 4, async b => {
       const lk = langKey(b.language, b.name);
-      const want = lk === 'ja' ? /일어|일본|JP/ : lk === 'ko' ? /한글|한국|KR/ : lk === 'en' ? /영문|영어|EN/ : null;
-      const toks = q(b).split(/\s+/).filter(t => t.length > 1);
-      const score = x => (want && want.test(x.name) ? 5 : 0) + toks.filter(t => x.name.includes(t)).length;
-      const best = list.filter(x => x.price > 100).sort((a, c) => score(c) - score(a))[0];
-      res[b.key] = best ? { found: true, price: Math.round(best.price / 100) * 100, source: 'kream', match: best.name, confidence: want && !want.test(best.name) ? 'low' : 'medium' } : { found: false };
-    }
-    return res;
+      const lw = lk === 'ja' ? '일본판' : lk === 'ko' ? '한글판' : lk === 'en' ? '영문판' : '';
+      const query = `포켓몬카드 ${q(b)} ${lw}`.trim();
+      let items = [];
+      try {
+        const r = await fetch(`https://openapi.naver.com/v1/search/shop.json?display=20&sort=sim&query=${encodeURIComponent(query)}`,
+          { headers: { 'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID, 'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET } });
+        if (r.ok) items = ((await r.json()).items || []).map(x => ({ name: String(x.title).replace(/<[^>]+>/g, ''), price: Number(x.lprice) }));
+      } catch {}
+      const want = lk === 'ja' ? /일본|일어|JP|재팬/i : lk === 'ko' ? /한글|한국|KR/i : lk === 'en' ? /영문|영어|EN/i : null;
+      const other = lk === 'ja' ? /한글|한국판/ : lk === 'ko' ? /일본|일어/ : null;
+      const toks = q(b).split(/\s+/).filter(t => t.length > 1 && !/박스|팩/.test(t));
+      const isPack = /팩/.test(q(b)) && !/박스/.test(q(b));
+      const good = items.filter(x => x.price > 1000 && toks.every(t => x.name.includes(t)) && (!other || !other.test(x.name))
+        && (isPack ? !/박스|BOX/i.test(x.name) : /박스|BOX/i.test(x.name)) && !/카드\s*1장|싱글|낱장/.test(x.name));
+      const pref = want ? good.filter(x => want.test(x.name)) : good;
+      const use = (pref.length ? pref : good).map(x => x.price).sort((a, c) => a - c);
+      if (!use.length) { out[b.key] = { found: false }; return; }
+      const med = use[Math.floor(use.length / 2)];  // 중간값 (지나치게 싸거나 비싼 판매글 영향 줄이기)
+      out[b.key] = { found: true, source: 'naver', price: Math.round(med / 100) * 100, match: `네이버 쇼핑 ${use.length}건 중간값`, confidence: pref.length ? 'medium' : 'low' };
+    });
+    return out;
   })();
-  if (!items.length) { const br = await boxJob; return res.status(200).json({ prices: br, debug: boxDebug }); }
+  if (!items.length) { const br = await boxJob; return res.status(200).json({ prices: br }); }
 
   try {
     const rateJ = await getJson(`${PAV}/api/rates`);
