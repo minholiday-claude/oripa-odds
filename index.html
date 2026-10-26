@@ -57,7 +57,7 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .seg button{flex:1;border:0;background:none;height:44px;border-radius:11px;font-weight:600;color:var(--sub);cursor:pointer;font-size:15px}
 .seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .hit{background:var(--input);border-radius:16px;padding:14px;margin-bottom:10px}
-.hit .top{display:grid;grid-template-columns:1fr 92px 36px;gap:8px;margin-bottom:8px}
+.hit .top{display:grid;grid-template-columns:1fr 100px 36px;gap:8px;margin-bottom:8px}
 .hit .bot{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 .hit .in{background:var(--card);height:46px;font-size:16px}
 .x{border:0;background:none;color:var(--faint);font-size:22px;cursor:pointer;border-radius:10px}
@@ -211,12 +211,12 @@ details.more .inner{padding-top:12px}
     <h2>오리파 기본 정보</h2>
     <p class="hint">화면에 보이는 그대로 넣어 주세요.</p>
     <div class="row2">
-      <label class="f"><span>사이트</span><input class="in" id="site" placeholder="예: kado.trade"></label>
-      <label class="f"><span>오리파 이름</span><input class="in" id="pack" placeholder="예: 피카츄 A"></label>
+      <label class="f"><span>사이트</span><input class="in" id="site" placeholder="예: pikauniverse.com"></label>
+      <label class="f"><span>오리파 이름</span><input class="in" id="pack" placeholder="예: 하이엔드 오리파"></label>
     </div>
-    <label class="f"><span>한 번 가격</span><div class="unit"><input class="in" id="price" inputmode="numeric" placeholder="1,900"><em>원</em></div></label>
-    <label class="f"><span>남은 횟수</span><div class="unit"><input class="in" id="remain" inputmode="numeric" placeholder="15,590"><em>회</em></div></label>
-    <p class="small">"14,410 / 30,000 개봉"처럼 보이면 30,000 − 14,410 = 15,590이에요.</p>
+    <label class="f"><span>한 번 가격</span><div class="unit"><input class="in" id="price" inputmode="numeric" placeholder="300,000"><em>원</em></div></label>
+    <label class="f"><span>남은 횟수</span><div class="unit"><input class="in" id="remain" inputmode="numeric" placeholder="213"><em>회</em></div></label>
+    <p class="small">"개봉 87 / 300"처럼 보이면 300 − 87 = 213이에요.</p>
     <label class="f" style="margin-bottom:0"><span>뽑기 방식</span>
       <div class="seg" id="mode"><button class="on" data-v="hyper">남은 수가 줄어듦</button><button data-v="fixed">확률 고정</button></div></label>
   </div>
@@ -241,7 +241,7 @@ details.more .inner{padding-top:12px}
     <details class="more">
       <summary>더 정확하게 (선택)</summary>
       <div class="inner">
-        <label class="f"><span>처음 전체 횟수</span><div class="unit"><input class="in" id="total0" inputmode="numeric" placeholder="30,000"><em>회</em></div></label>
+        <label class="f"><span>처음 전체 횟수</span><div class="unit"><input class="in" id="total0" inputmode="numeric" placeholder="300"><em>회</em></div></label>
         <p class="small">넣으면 처음보다 좋아졌는지, 사람들이 기대보다 많이 뽑아 갔는지 알려 드려요. 히트별 "처음 수"도 함께 넣어 주세요.</p>
         <div class="row2">
           <label class="f"><span>라스트원 보너스 시세</span><div class="unit"><input class="in" id="lastone" inputmode="numeric" placeholder="0"><em>원</em></div></label>
@@ -362,7 +362,7 @@ function hitRow(h={}){
   d.innerHTML=`<div class="kinds">${Object.entries(KINDS).map(([k,o])=>`<button type="button" data-k="${k}" class="${k===kind?'on':''}">${o.label}</button>`).join('')}</div>
     <div class="top">
       <input class="in hn" value="${esc(h.name??'')}">
-      <div class="unit"><input class="in hk" inputmode="numeric" placeholder="남은 수" value="${h.k??''}"><em>개</em></div>
+      <div class="unit"><input class="in hk" inputmode="numeric" placeholder="남은" value="${h.k??''}"><em>개</em></div>
       <button class="x" title="삭제">×</button></div>
     <input class="in hd" value="${esc(h.detail??'')}">
     <div class="bot">
@@ -629,9 +629,16 @@ $('#home').onclick=e=>{e.preventDefault();switchTab('calc');try{history.replaceS
 
 /* ---------- 예시 · 시작 ---------- */
 $('#example').onclick=()=>{
-  writeState({site:'예시 사이트',pack:'예시 오리파',price:1900,N:15590,mode:'hyper',miss:100,budget:100000,N0:30000,
-    hits:[{name:'레전더리 카드',k:4,v:300000,k0:7},{name:'에픽 카드',k:17,v:40000,k0:29}]});
-  toast('예시 값을 넣었어요. 시세는 가상의 값이에요');
+  writeState({site:'예시 사이트',pack:'예시 하이엔드 오리파',price:300000,N:213,mode:'hyper',miss:0,budget:300000,N0:300,lastone:2000000,
+    hits:[
+      {name:'1등',kind:'card',k:10,k0:15,v:2360000,items:[
+        {name:'마리오 피카츄 P XY 프로모 카드 (일어판)',card:'마리오 피카츄',rarity:'P',set:'XY 프로모',language:'일어판',price:18000000,qty:1},
+        {name:'블래키 VMAX HR 이브이 히어로즈 (일어판)',card:'블래키 VMAX',rarity:'HR',set:'이브이 히어로즈',language:'일어판',price:7000000,qty:1},
+        {name:'로켓단의 뮤츠 ex SAR 로켓단의 영광 (일어판)',card:'로켓단의 뮤츠 ex',rarity:'SAR',set:'로켓단의 영광',language:'일어판',price:800000,qty:13}]},
+      {name:'2등',kind:'box',k:30,k0:44,v:40000,items:[
+        {name:'어비스 아이 메가 확장팩 1 박스 (30팩_한글판)',card:'어비스 아이 메가 확장팩 1 박스',language:'한글판',price:40000,qty:44}]},
+      {name:'3등',kind:'pack',k:173,k0:241,v:2500,items:[{name:'Random Pack',card:'Random Pack',price:2500,qty:241}]}]});
+  toast('예시 값을 넣었어요. 가격은 가상의 값이에요');
 };
 /* ---------- 로딩 캐릭터 (데덴네) — 바꿀 땐 이 그림만 교체 ---------- */
 const dd=(face)=>`<svg viewBox="0 0 120 112" aria-hidden="true">
