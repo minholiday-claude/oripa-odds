@@ -80,6 +80,9 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .item .cn::after{content:" ▾";color:var(--faint);font-size:10px}
 .item .nm.open .cn::after{content:" ▴"}
 .item .det{display:none;font-size:12px;color:var(--faint);margin-top:4px;line-height:1.4}
+.ip.pp{box-shadow:inset 0 0 0 1.5px var(--accent-text)!important}
+.ip.pw{box-shadow:inset 0 0 0 1.5px var(--orange)!important}
+.item .det .src{font-style:normal;color:var(--accent-text)}
 .item .det span{color:var(--faint);opacity:.8}
 .item .nm.open .det{display:block}
 .pav.kr{background:#F4F4F4;color:#222}
@@ -773,6 +776,7 @@ function applyFields(f,url){
   setTimeout(()=>$$('.filled').forEach(el=>el.classList.remove('filled')),6000);
   if(miss.length)upMsg(`못 찾은 항목: ${miss.join(', ')}`);else $('#upMsg').classList.add('hide');
   toast('자동으로 채웠어요');
+  autoPrice(miss);
 }
 
 $('#warnBtn').onclick=()=>$('#warnbox').classList.toggle('open');
@@ -783,6 +787,37 @@ function addHelpBadges(){
     b.onclick=e=>{e.preventDefault();e.stopPropagation();c.classList.toggle('help')};h.append(b)});
 }
 addHelpBadges();
+/* ---------- 파빌리온 시세 자동 조회 ---------- */
+async function autoPrice(miss=[]){
+  const rows=$$('.hit').filter(d=>d._items),req=[];
+  rows.forEach((d,ri)=>d._items.forEach((it,ii)=>{
+    const card=it.card||cleanQ(it.name),isCard=/카드/.test(it.name)&&!/카드팩/.test(it.name)||guessKind(card)==='card';
+    if(isCard&&card)req.push({key:ri+'-'+ii,card,name:it.name,rarity:it.rarity,set:it.set,language:it.language,variant:it.variant,grade:it.grade});
+  }));
+  if(!req.length)return;
+  upMsg(loadingHtml('피카츄가 시세를 찾고 있어요'),true);
+  try{
+    const r=await fetch('/api/price',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:req})});
+    const j=await r.json();
+    if(!r.ok){upMsg(j.error||'시세를 가져오지 못했어요');return}
+    let ok=0,warn=0;
+    rows.forEach((d,ri)=>{
+      const ips=d.querySelectorAll('.ip'),dets=d.querySelectorAll('.item .det');
+      d._items.forEach((it,ii)=>{const p=j.prices[ri+'-'+ii];if(!p||!p.found)return;
+        it.price=p.price;it.src='pavilion';it.match=p.match;
+        const w=p.confidence==='low'||p.gradeFallback;ok++;if(w)warn++;
+        ips[ii].value=p.price.toLocaleString('ko-KR');ips[ii].classList.add(w?'pw':'pp');
+        dets[ii].insertAdjacentHTML('beforeend',`<br><em class="src">파빌리온 · ${esc(p.match)} · ${esc(p.grade||'')}${p.gradeFallback?' (원하는 등급 시세 없음)':''}${p.confidence==='low'?' · 확인 필요':''}</em>`);
+      });
+      if(ips[0])ips[0].dispatchEvent(new Event('input'));
+    });
+    const tail=req.length-ok;
+    const parts=[`파빌리온 시세 ${ok}개 넣었어요`];if(warn)parts.push(`${warn}개는 확인 필요`);if(tail)parts.push(`${tail}개는 못 찾았어요`);
+    if(miss.length)parts.unshift(`못 찾은 항목: ${miss.join(', ')}`);
+    upMsg(parts.join(' · '));
+  }catch(e){upMsg('시세를 가져오지 못했어요')}
+}
+
 (function init(){
   let s=null;
   if(location.hash.length>2){try{s=JSON.parse(decodeURIComponent(location.hash.slice(1)))}catch(e){}}

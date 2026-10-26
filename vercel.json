@@ -1,5 +1,6 @@
 {
   "functions": {
-    "api/extract.js": { "maxDuration": 60, "memory": 1769 }
+    "api/extract.js": { "maxDuration": 60, "memory": 1769 },
+    "api/price.js": { "maxDuration": 60 }
   }
 }
