@@ -57,14 +57,16 @@ const TOOL = {
           properties: {
             tier: { type: ['string', 'null'], description: '이 상품이 속한 등급명 (hits의 name과 똑같이). 라스트원 상품은 넣지 말 것' },
             name: { type: 'string', description: '사이트에 적힌 상품명 그대로' },
-            card_name: { type: ['string', 'null'], description: '카드명만. 포켓몬/캐릭터 이름 + 이름에 붙는 형태(ex, V, VMAX, VSTAR, GX, 빛나는, 로켓단의 등)까지. 레어도(SAR, SR, HR, UR, AR, P)·세트명·"프로모 카드"·언어는 빼기. 예: "마리오 피카츄 P XY 프로모 카드 (일어판)" → "마리오 피카츄", "블래키 VMAX HR 이브이 히어로즈" → "블래키 VMAX", "로켓단의 뮤츠 ex SAR 로켓단의 영광" → "로켓단의 뮤츠 ex". 박스·팩이면 상품명(예: "어비스 아이 메가 확장팩 1 박스")' },
-            rarity: { type: ['string', 'null'], description: '레어도 (SAR, SR, HR, UR, AR, P 등)' },
+            card_name: { type: ['string', 'null'], description: '카드명만. 포켓몬/캐릭터 이름 + 이름에 붙는 형태(ex, V, VMAX, VSTAR, GX, 빛나는, 로켓단의 등)까지. 레어도(SAR, SR, HR, UR, AR, P)·세트명·"프로모 카드"·언어는 빼기. 예: "마리오 피카츄 P XY 프로모 카드 (일어판)" → "마리오 피카츄", "블래키 VMAX HR 이브이 히어로즈" → "블래키 VMAX", "로켓단의 뮤츠 ex SAR 로켓단의 영광" → "로켓단의 뮤츠 ex". 박스·팩이면 언어 표기를 뺀 상품명(예: "어비스 아이 메가 확장팩 1 박스", "테라스탈 페스타 ex 박스"). 비워 두지 말 것' },
+            rarity: { type: ['string', 'null'], description: '레어도 (SAR, SR, HR, UR, AR, CHR, CSR, MA, P 등)' },
+            variant: { type: ['string', 'null'], description: '같은 카드의 다른 버전 표기. 예: 마스터볼 미러, 몬스터볼 미러, 리버스 홀로, 1st 에디션' },
+            grade: { type: ['string', 'null'], description: '감정 등급. 예: PSA10, PSA9, BGS9.5, CGC10. 없으면 null' },
             set: { type: ['string', 'null'], description: '세트·확장팩 이름' },
             language: { type: ['string', 'null'], description: '일어판, 한글판, 영문판 등' },
             price: { type: ['number', 'null'], description: '사이트에 적힌 가격, 원' },
             qty: { type: ['number', 'null'], description: '수량 (× 숫자)' },
           },
-          required: ['tier', 'name', 'card_name', 'rarity', 'set', 'language', 'price', 'qty'],
+          required: ['tier', 'name', 'card_name', 'rarity', 'variant', 'grade', 'set', 'language', 'price', 'qty'],
         },
       },
       last_one: { type: ['string', 'null'], description: '라스트원 보너스 상품 설명' },
@@ -202,7 +204,7 @@ function finish(f) {
       const q = its.reduce((a, i) => a + (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const sum = its.reduce((a, i) => a + i.price * (isFinite(i.qty) && i.qty > 0 ? i.qty : 1), 0);
       const list = (h.items || []).filter(i => i && i.name).slice(0, 40)
-        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card, rarity, set: i.set || null, language: i.language || null, price: typeof i.price === 'number' && i.price > 0 ? i.price : null, qty: Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
+        .map(i => { const [card, rarity] = splitRarity(i.card_name, i.rarity); return { name: String(i.name).trim(), card: card || String(i.name).replace(/^포켓몬\s*TCG\s*/, '').replace(/\s*\((JP|KR|EN)\)|\s*\([^)]*판\)/g, '').trim(), rarity, variant: i.variant || null, grade: i.grade ? String(i.grade).replace(/\s+/g, '').toUpperCase() : null, set: i.set || null, language: i.language || null, price: typeof i.price === 'number' && i.price > 0 ? i.price : null, qty: Number.isFinite(i.qty) && i.qty > 0 ? i.qty : 1 }; });
       const out = { name: h.name, card_name: h.card_name || null, rarity: h.rarity || null, set: h.set || null, language: h.language || null, kind: h.kind, remaining: h.remaining, initial: h.initial, item_count: its.length, items: list };
       if (q > 0) out.value = Math.round(sum / q);   // 등급 안 상품 가격의 평균 (사이트 표기 가격)
       return out;
