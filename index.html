@@ -65,6 +65,9 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .pav{display:inline-flex;align-items:center;gap:4px;height:46px;padding:0 12px;border-radius:12px;background:var(--accent-l);color:var(--accent-text);
   font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
 .pav.dis{opacity:.4;pointer-events:none}
+.kinds{display:flex;gap:6px;margin-bottom:8px}
+.kinds button{border:0;height:30px;padding:0 12px;border-radius:99px;background:var(--card);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
+.kinds button.on{background:var(--accent-ink);color:var(--accent)}
 .add{width:100%;height:48px;border:1.5px dashed var(--line);background:none;border-radius:14px;color:var(--accent-text);font-weight:700;cursor:pointer}
 details.more{margin-top:4px}
 details.more summary{list-style:none;cursor:pointer;font-weight:700;color:var(--sub);display:flex;justify-content:space-between;align-items:center;padding:6px 0}
@@ -180,7 +183,7 @@ details.more .inner{padding-top:12px}
   <div class="card">
     <p class="step">2단계 · 필수</p>
     <h2>히트 목록</h2>
-    <p class="hint">등급이나 카드별로 남은 수를 넣어 주세요. 시세는 파빌리온에서 바로 찾아볼 수 있어요.</p>
+    <p class="hint">히트는 카드일 수도, 박스·팩일 수도 있어요. 종류를 고르고 남은 수와 시세를 넣어 주세요. 카드 시세는 파빌리온, 박스·팩은 쇼핑 검색으로 바로 찾아볼 수 있어요.</p>
     <div id="hits"></div>
     <button class="add" id="addHit">＋ 히트 추가</button>
   </div>
@@ -289,10 +292,18 @@ const fmtInput=el=>{const n=num(el.value);if(el.value.trim()==='')return;if(isFi
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)}
 
 /* ---------- 히트 목록 ---------- */
+const KINDS={
+  card:{label:'카드',namePh:'카드명 또는 등급 (예: 리자몽 ex SAR)',valPh:'1장 시세',linkLabel:'파빌리온 시세 ↗',url:q=>q?'https://pavilion-tcg.com/search?q='+encodeURIComponent(q):''},
+  box:{label:'박스',namePh:'박스 이름 (예: EB03 1박스)',valPh:'박스 1개 시세',linkLabel:'박스 시세 검색 ↗',url:q=>q?'https://search.shopping.naver.com/search/all?query='+encodeURIComponent(q):''},
+  pack:{label:'팩',namePh:'팩 이름과 수량 (예: 30주년 팩 3팩)',valPh:'받는 팩 전체 시세',linkLabel:'팩 시세 검색 ↗',url:q=>q?'https://search.shopping.naver.com/search/all?query='+encodeURIComponent(q):''},
+  etc:{label:'기타',namePh:'포인트, 쿠폰, 굿즈 등',valPh:'원으로 환산한 가치',linkLabel:'시세 검색 없음',url:q=>''}
+};
 function hitRow(h={}){
   const d=document.createElement('div');d.className='hit';
-  d.innerHTML=`<div class="top">
-      <input class="in hn" placeholder="등급 또는 카드명 (예: 레전더리)" value="${h.name??''}">
+  const kind=h.kind||'card';
+  d.innerHTML=`<div class="kinds">${Object.entries(KINDS).map(([k,o])=>`<button type="button" data-k="${k}" class="${k===kind?'on':''}">${o.label}</button>`).join('')}</div>
+    <div class="top">
+      <input class="in hn" placeholder="등급 또는 카드명 (예: 레전더리)" value="${esc(h.name??'')}">
       <div class="unit"><input class="in hk" inputmode="numeric" placeholder="남은 수" value="${h.k??''}"><em>개</em></div>
       <button class="x" title="삭제">×</button></div>
     <div class="bot">
@@ -300,11 +311,15 @@ function hitRow(h={}){
         <div class="unit"><input class="in hv" inputmode="numeric" placeholder="1장 시세" value="${h.v!=null&&h.v!==''?Number(h.v).toLocaleString('ko-KR'):''}"><em>원</em></div>
         <div class="unit"><input class="in hk0" inputmode="numeric" placeholder="처음 수(선택)" value="${h.k0??''}"><em>개</em></div>
       </div>
-      <a class="pav" target="_blank" rel="noopener">파빌리온 시세 ↗</a>
+      <a class="pav" target="_blank" rel="noopener"></a>
     </div>`;
-  const nameI=d.querySelector('.hn'),a=d.querySelector('.pav');
-  const upd=()=>{const q=nameI.value.trim();a.href='https://pavilion-tcg.com/search?q='+encodeURIComponent(q);a.classList.toggle('dis',!q)};
+  d.dataset.kind=kind;
+  const nameI=d.querySelector('.hn'),a=d.querySelector('.pav'),vI=d.querySelector('.hv');
+  const upd=()=>{const o=KINDS[d.dataset.kind],q=nameI.value.trim();
+    a.textContent=o.linkLabel;a.href=o.url(q);a.classList.toggle('dis',!q||!o.url(q));
+    nameI.placeholder=o.namePh;vI.placeholder=o.valPh;};
   nameI.addEventListener('input',upd);upd();
+  d.querySelectorAll('.kinds button').forEach(b=>b.onclick=()=>{d.dataset.kind=b.dataset.k;d.querySelectorAll('.kinds button').forEach(x=>x.classList.toggle('on',x===b));upd()});
   d.querySelector('.x').onclick=()=>{d.remove();if(!$$('.hit').length)$('#hits').append(hitRow())};
   d.querySelector('.hv').addEventListener('blur',e=>fmtInput(e.target));
   return d;
@@ -320,14 +335,14 @@ function readState(){
     N0:num($('#total0').value),lastone:num($('#lastone').value)||0,fee:num($('#fee').value)||0,
     bonusV:num($('#bonusV').value)||0,bonusR:num($('#bonusR').value),
     hits:$$('.hit').map(d=>({name:d.querySelector('.hn').value.trim(),k:num(d.querySelector('.hk').value),
-      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value)})).filter(h=>h.name||isFinite(h.k))};
+      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value),kind:d.dataset.kind||'card'})).filter(h=>h.name||isFinite(h.k))};
 }
 function writeState(s){
   const set=(id,v)=>{$(id).value=(v==null||!isFinite(v)&&typeof v==='number')?'':(typeof v==='number'?v.toLocaleString('ko-KR'):v)};
   set('#site',s.site||'');set('#pack',s.pack||'');set('#price',s.price);set('#remain',s.N);set('#miss',s.miss||'');
   set('#budget',s.budget);set('#total0',s.N0);set('#lastone',s.lastone||'');set('#fee',s.fee||'');set('#bonusV',s.bonusV||'');set('#bonusR',s.bonusR);
   $$('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.v===(s.mode||'hyper')));
-  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));
+  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,kind:h.kind,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));
   if(s.N0||s.lastone||s.fee||s.bonusV)$('details.more').open=true;
 }
 
@@ -491,7 +506,7 @@ function run(){
   try{history.replaceState(null,'','#'+encodeURIComponent(JSON.stringify(compact(s))))}catch(e){}
 }
 const compact=s=>({site:s.site,pack:s.pack,price:s.price,N:s.N,mode:s.mode,miss:s.miss,budget:s.budget,N0:isFinite(s.N0)?s.N0:null,
-  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null}))});
+  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,kind:h.kind||'card',k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null}))});
 $('#go').onclick=run;
 $('#back').onclick=()=>{$('#result').style.display='none';$('#tab-calc').classList.remove('hide');$('#ctaRes').classList.add('hide');$('#ctaCalc').classList.remove('hide');window.scrollTo({top:0})};
 $('#sim1').onclick=()=>{
@@ -590,7 +605,7 @@ function applyFields(f){
   if(f.total!=null)s.N0=f.total;
   if(f.fixed_probability===true)s.mode='fixed';else if(f.fixed_probability===false)s.mode='hyper';
   const old=Object.fromEntries(s.hits.map(h=>[h.name,h.v]));
-  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>({name:h.name,k:h.remaining??NaN,k0:h.initial??NaN,v:old[h.name]??NaN}));got.push('히트 '+f.hits.length+'개')}
+  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>({name:h.name,kind:KINDS[h.kind]?h.kind:'card',k:h.remaining??NaN,k0:h.initial??NaN,v:old[h.name]??NaN}));got.push('히트 '+f.hits.length+'개')}
   else miss.push('히트 목록');
   writeState(s);
   ['#site','#pack','#price','#remain'].forEach((id,i)=>{if([f.site,f.pack,f.price,f.remaining][i]!=null)$(id).classList.add('filled')});

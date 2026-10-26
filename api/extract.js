@@ -37,10 +37,11 @@ const TOOL = {
           type: 'object',
           properties: {
             name: { type: 'string', description: '등급명 또는 카드명' },
+            kind: { type: 'string', enum: ['card', 'box', 'pack', 'etc'], description: '받는 것이 카드면 card, 박스면 box, 카드팩이면 pack, 포인트·쿠폰·굿즈 등은 etc' },
             remaining: { type: ['number', 'null'], description: '남은 수' },
             initial: { type: ['number', 'null'], description: '처음 수' },
           },
-          required: ['name', 'remaining', 'initial'],
+          required: ['name', 'kind', 'remaining', 'initial'],
         },
       },
       last_one: { type: ['string', 'null'], description: '라스트원 보너스 상품 설명' },
