@@ -797,8 +797,8 @@ addHelpBadges();
 async function autoPrice(miss=[]){
   const rows=$$('.hit').filter(d=>d._items),req=[];
   rows.forEach((d,ri)=>d._items.forEach((it,ii)=>{
-    const card=it.card||cleanQ(it.name),isCard=/카드/.test(it.name)&&!/카드팩/.test(it.name)||guessKind(card)==='card';
-    if(isCard&&card)req.push({key:ri+'-'+ii,card,name:it.name,rarity:it.rarity,set:it.set,language:it.language,variant:it.variant,grade:it.grade});
+    const card=it.card||cleanQ(it.name),kind=/카드/.test(it.name)&&!/카드팩/.test(it.name)?'card':guessKind(card);
+    if(card)req.push({key:ri+'-'+ii,kind,card,name:it.name,rarity:it.rarity,set:it.set,language:it.language,variant:it.variant,grade:it.grade});
   }));
   if(!req.length)return;
   upMsg(loadingHtml('데덴네가 시세를 찾고 있어요'),true);
@@ -813,12 +813,12 @@ async function autoPrice(miss=[]){
         it.price=p.price;it.src='pavilion';it.match=p.match;
         const w=p.confidence==='low'||p.gradeFallback;ok++;if(w)warn++;
         ips[ii].value=p.price.toLocaleString('ko-KR');ips[ii].classList.add(w?'pw':'pp');
-        dets[ii].insertAdjacentHTML('beforeend',`<br><em class="src">파빌리온 · ${esc(p.match)} · ${esc(p.grade||'')}${p.gradeFallback?' (원하는 등급 시세 없음)':''}${p.confidence==='low'?' · 확인 필요':''}</em>`);
+        dets[ii].insertAdjacentHTML('beforeend',`<br><em class="src">${p.source==='kream'?'KREAM':'파빌리온'} · ${esc(p.match)}${p.grade?' · '+esc(p.grade):''}${p.gradeFallback?' (원하는 등급 시세 없음)':''}${p.confidence==='low'?' · 확인 필요':''}</em>`);
       });
       if(ips[0])ips[0].dispatchEvent(new Event('input'));
     });
     const tail=req.length-ok;
-    const parts=[`파빌리온 시세 ${ok}개 넣었어요`];if(warn)parts.push(`${warn}개는 확인 필요`);if(tail)parts.push(`${tail}개는 못 찾았어요`);
+    const parts=[`시세 ${ok}개 넣었어요`];if(warn)parts.push(`${warn}개는 확인 필요`);if(tail)parts.push(`${tail}개는 못 찾았어요`);
     if(miss.length)parts.unshift(`못 찾은 항목: ${miss.join(', ')}`);
     upMsg(parts.join(' · '));
   }catch(e){upMsg('시세를 가져오지 못했어요')}

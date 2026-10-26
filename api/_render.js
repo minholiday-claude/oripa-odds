@@ -35,3 +35,37 @@ async function renderText(url) {
 }
 
 module.exports = { renderText };
+
+// KREAM 검색 결과에서 상품명·가격 목록 읽기 (브라우저 하나로 여러 검색어)
+async function kreamSearch(queries) {
+  const chromium = (await import('@sparticuz/chromium')).default;
+  const puppeteer = (await import('puppeteer-core')).default;
+  const browser = await puppeteer.launch({ args: chromium.args, executablePath: await chromium.executablePath(), headless: true });
+  const out = {};
+  try {
+    for (const q of queries) {
+      const page = await browser.newPage();
+      try {
+        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1');
+        await page.setRequestInterception(true);
+        page.on('request', r => (['image', 'media', 'font'].includes(r.resourceType()) ? r.abort() : r.continue()));
+        await page.goto('https://kream.co.kr/search?keyword=' + encodeURIComponent(q), { waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1200));
+        const text = await page.evaluate(() => document.body ? document.body.innerText : '');
+        // "포켓몬 TCG ... (30팩/일어판)" 다음 줄의 "68,000원"을 짝지음
+        const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+        const list = [];
+        for (let i = 0; i < lines.length - 1 && list.length < 12; i++) {
+          if (/^포켓몬\s*TCG|^Pokemon|박스|BOX|팩|카드/i.test(lines[i]) && lines[i].length > 6) {
+            const m = (lines[i + 1] || '').match(/^([\d,]+)원$/);
+            if (m) list.push({ name: lines[i], price: Number(m[1].replace(/,/g, '')) });
+          }
+        }
+        out[q] = list;
+      } catch { out[q] = []; } finally { await page.close().catch(() => {}); }
+    }
+  } finally { await browser.close().catch(() => {}); }
+  return out;
+}
+
+module.exports.kreamSearch = kreamSearch;
