@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>오리파 승률 계산기</title>
+<meta name="description" content="오리파 화면의 숫자를 넣으면 지금 사도 되는지 확률로 알려 드려요.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --bg:#F2F4F6; --card:#FFFFFF; --text:#191F28; --sub:#4E5968; --faint:#8B95A1; --line:#E5E8EB;
+  --blue:#3182F6; --blue-d:#1B64DA; --blue-l:#E8F3FF;
+  --green:#03B26C; --green-l:#E5F8EF; --orange:#FE9800; --orange-l:#FFF3E0; --red:#F04452; --red-l:#FFEEEE;
+  --input:#F9FAFB; --r:20px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101013; --card:#1C1C21; --text:#F2F4F6; --sub:#B0B8C1; --faint:#7E8794; --line:#2C2C35;
+    --blue-l:#1A2B45; --green-l:#13302A; --orange-l:#3A2A12; --red-l:#3A1C20; --input:#26262D;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101013; --card:#1C1C21; --text:#F2F4F6; --sub:#B0B8C1; --faint:#7E8794; --line:#2C2C35;
+  --blue-l:#1A2B45; --green-l:#13302A; --orange-l:#3A2A12; --red-l:#3A1C20; --input:#26262D;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  font-size:16px;line-height:1.5;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;padding-bottom:110px}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
+.logo{font-weight:800;font-size:18px;display:flex;align-items:center;gap:8px}
+.logo i{width:24px;height:24px;border-radius:8px;background:var(--blue);display:inline-grid;place-items:center;color:#fff;font-style:normal;font-size:13px}
+.tabs{display:flex;gap:4px;background:var(--card);border-radius:12px;padding:4px}
+.tabs button{border:0;background:none;padding:6px 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--faint);cursor:pointer}
+.tabs button.on{background:var(--blue-l);color:var(--blue)}
+.hero{padding:20px 4px 18px}
+.hero h1{font-size:26px;line-height:1.35;font-weight:800;letter-spacing:-.02em}
+.hero p{color:var(--sub);margin-top:8px;font-size:15px}
+.card{background:var(--card);border-radius:var(--r);padding:22px 20px;margin-bottom:12px}
+.card h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.card .hint{font-size:14px;color:var(--faint);margin-bottom:16px}
+.step{display:inline-block;font-size:13px;font-weight:700;color:var(--blue);margin-bottom:6px}
+label.f{display:block;margin-bottom:14px}
+label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margin-bottom:6px}
+.in{width:100%;height:52px;border:0;border-radius:14px;background:var(--input);padding:0 16px;font-size:17px;font-weight:600;outline:none;
+  box-shadow:inset 0 0 0 1px transparent;transition:box-shadow .15s}
+.in:focus{box-shadow:inset 0 0 0 2px var(--blue)}
+.in::placeholder{color:var(--faint);font-weight:500}
+.unit{position:relative}
+.unit em{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--faint);font-weight:600;pointer-events:none}
+.unit .in{padding-right:44px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;background:var(--input);border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:none;height:44px;border-radius:11px;font-weight:600;color:var(--sub);cursor:pointer;font-size:15px}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.hit{background:var(--input);border-radius:16px;padding:14px;margin-bottom:10px}
+.hit .top{display:grid;grid-template-columns:1fr 92px 36px;gap:8px;margin-bottom:8px}
+.hit .bot{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.hit .in{background:var(--card);height:46px;font-size:16px}
+.x{border:0;background:none;color:var(--faint);font-size:22px;cursor:pointer;border-radius:10px}
+.x:hover{background:var(--line)}
+.pav{display:inline-flex;align-items:center;gap:4px;height:46px;padding:0 12px;border-radius:12px;background:var(--blue-l);color:var(--blue);
+  font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+.pav.dis{opacity:.4;pointer-events:none}
+.add{width:100%;height:48px;border:1.5px dashed var(--line);background:none;border-radius:14px;color:var(--blue);font-weight:700;cursor:pointer}
+details.more{margin-top:4px}
+details.more summary{list-style:none;cursor:pointer;font-weight:700;color:var(--sub);display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+details.more summary::after{content:"＋";color:var(--faint)}
+details.more[open] summary::after{content:"－"}
+details.more .inner{padding-top:12px}
+.small{font-size:13px;color:var(--faint);margin-top:-6px;margin-bottom:14px}
+.cta{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,var(--bg) 70%,transparent)}
+.cta .wrap{display:flex;gap:8px;padding:0}
+.btn{flex:1;height:56px;border:0;border-radius:16px;background:var(--blue);color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+.btn:active{background:var(--blue-d)}
+.btn.sub{flex:0 0 auto;padding:0 18px;background:var(--card);color:var(--sub)}
+.ghost{border:0;background:var(--input);color:var(--sub);height:40px;padding:0 14px;border-radius:12px;font-weight:600;cursor:pointer;font-size:14px}
+/* 결과 */
+#result{display:none}
+.verdict{border-radius:var(--r);padding:26px 22px;margin-bottom:12px;background:var(--card)}
+.verdict .badge{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:15px;padding:6px 12px;border-radius:999px}
+.verdict h2{font-size:28px;font-weight:800;line-height:1.3;margin:14px 0 6px;letter-spacing:-.02em}
+.verdict p{color:var(--sub)}
+.v-go .badge{background:var(--green-l);color:var(--green)}
+.v-wait .badge{background:var(--orange-l);color:var(--orange)}
+.v-no .badge{background:var(--red-l);color:var(--red)}
+.v-none .badge{background:var(--input);color:var(--sub)}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.big div{background:var(--input);border-radius:16px;padding:14px}
+.big b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.big span{font-size:13px;color:var(--faint);font-weight:600}
+.list{list-style:none}
+.list li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}
+.list li:last-child{border-bottom:0}
+.list li span{color:var(--sub)}
+.list li b{font-weight:700;text-align:right}
+.bar{height:8px;border-radius:99px;background:var(--input);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:99px}
+.stack{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--input)}
+.stack i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:var(--sub)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:var(--c)}
+.tip{background:var(--blue-l);color:var(--text);border-radius:14px;padding:14px 16px;font-size:14px;margin-top:12px}
+.warn{font-size:13px;color:var(--faint);line-height:1.6;padding:6px 4px 20px}
+.draws{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px}
+.draws i{width:14px;height:14px;border-radius:4px;background:var(--line)}
+.draws i.h{background:var(--blue)}
+.draws i.h2{background:var(--orange)}
+.empty{text-align:center;color:var(--faint);padding:30px 0}
+.cmp{width:100%;border-collapse:collapse;font-size:14px}
+.cmp th{text-align:left;color:var(--faint);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.cmp td{padding:12px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.cmp td b{display:block}
+.cmp td small{color:var(--faint)}
+.chip{display:inline-block;font-size:12px;font-weight:800;padding:3px 8px;border-radius:99px}
+.chip.go{background:var(--green-l);color:var(--green)} .chip.wait{background:var(--orange-l);color:var(--orange)}
+.chip.no{background:var(--red-l);color:var(--red)} .chip.none{background:var(--input);color:var(--sub)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:#333D4B;color:#fff;padding:12px 18px;border-radius:14px;
+  font-size:14px;font-weight:600;opacity:0;transition:.25s;z-index:9;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="logo"><i>%</i>오리파 승률</div>
+  <div class="tabs"><button class="on" data-tab="calc">계산</button><button data-tab="saved">비교 <span id="savedN"></span></button></div>
+</div></header>
+
+<main class="wrap">
+<!-- ============ 계산 ============ -->
+<section id="tab-calc">
+  <div class="hero">
+    <h1>이 오리파,<br>지금 사도 될까요?</h1>
+    <p>사이트나 앱 화면에 보이는 숫자를 넣으면 확률로 알려 드려요.</p>
+  </div>
+
+  <div class="card">
+    <p class="step">1단계 · 필수</p>
+    <h2>오리파 기본 정보</h2>
+    <p class="hint">화면에 보이는 그대로 넣어 주세요.</p>
+    <div class="row2">
+      <label class="f"><span>사이트</span><input class="in" id="site" placeholder="예: kado.trade"></label>
+      <label class="f"><span>오리파 이름</span><input class="in" id="pack" placeholder="예: 피카츄 A"></label>
+    </div>
+    <label class="f"><span>한 번 가격</span><div class="unit"><input class="in" id="price" inputmode="numeric" placeholder="1,900"><em>원</em></div></label>
+    <label class="f"><span>남은 횟수</span><div class="unit"><input class="in" id="remain" inputmode="numeric" placeholder="15,590"><em>회</em></div></label>
+    <p class="small">"14,410 / 30,000 개봉"처럼 보이면 30,000 − 14,410 = 15,590이에요.</p>
+    <label class="f" style="margin-bottom:0"><span>뽑기 방식</span>
+      <div class="seg" id="mode"><button class="on" data-v="hyper">남은 수가 줄어듦</button><button data-v="fixed">확률 고정</button></div></label>
+  </div>
+
+  <div class="card">
+    <p class="step">2단계 · 필수</p>
+    <h2>히트 목록</h2>
+    <p class="hint">등급이나 카드별로 남은 수를 넣어 주세요. 시세는 파빌리온에서 바로 찾아볼 수 있어요.</p>
+    <div id="hits"></div>
+    <button class="add" id="addHit">＋ 히트 추가</button>
+  </div>
+
+  <div class="card">
+    <p class="step">3단계 · 판정에 필요</p>
+    <h2>꽝과 내 예산</h2>
+    <p class="hint">꽝으로 받는 카드나 코인을 원으로 환산해 주세요. 모르면 0으로 둬도 돼요.</p>
+    <label class="f"><span>꽝 한 번의 가치</span><div class="unit"><input class="in" id="miss" inputmode="numeric" placeholder="0"><em>원</em></div></label>
+    <label class="f" style="margin-bottom:0"><span>내 예산</span><div class="unit"><input class="in" id="budget" inputmode="numeric" value="100,000"><em>원</em></div></label>
+  </div>
+
+  <div class="card">
+    <details class="more">
+      <summary>더 정확하게 (선택)</summary>
+      <div class="inner">
+        <label class="f"><span>처음 전체 횟수</span><div class="unit"><input class="in" id="total0" inputmode="numeric" placeholder="30,000"><em>회</em></div></label>
+        <p class="small">넣으면 처음보다 좋아졌는지, 사람들이 기대보다 많이 뽑아 갔는지 알려 드려요. 히트별 "처음 수"도 함께 넣어 주세요.</p>
+        <div class="row2">
+          <label class="f"><span>라스트원 보너스 시세</span><div class="unit"><input class="in" id="lastone" inputmode="numeric" placeholder="0"><em>원</em></div></label>
+          <label class="f"><span>배송비·수수료</span><div class="unit"><input class="in" id="fee" inputmode="numeric" placeholder="0"><em>원</em></div></label>
+        </div>
+        <div class="row2">
+          <label class="f"><span>확정 보너스 시세</span><div class="unit"><input class="in" id="bonusV" inputmode="numeric" placeholder="0"><em>원</em></div></label>
+          <label class="f"><span>다음 확정까지</span><div class="unit"><input class="in" id="bonusR" inputmode="numeric" placeholder="590"><em>회</em></div></label>
+        </div>
+        <p class="small" style="margin-bottom:0">"1,000번째마다 박스 확정"처럼 번호 보너스가 있을 때 넣어 주세요.</p>
+      </div>
+    </details>
+  </div>
+  <p class="warn" style="text-align:center"><button class="ghost" id="example">예시 넣어 보기</button></p>
+</section>
+
+<!-- ============ 결과 ============ -->
+<section id="result">
+  <div class="hero" style="padding-bottom:10px"><button class="ghost" id="back">← 다시 입력</button></div>
+  <div class="verdict" id="vCard">
+    <span class="badge" id="vBadge"></span>
+    <h2 id="vTitle"></h2>
+    <p id="vDesc"></p>
+    <div class="big">
+      <div><span>환급률 (판정 기준)</span><b id="kRtp">-</b></div>
+      <div><span id="kWinLbl">승률</span><b id="kWin">-</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>지금 한 번 뽑으면</h2>
+    <p class="hint">남은 수 ÷ 남은 횟수로 계산했어요.</p>
+    <ul class="list" id="probList"></ul>
+  </div>
+
+  <div class="card" id="budgetCard">
+    <h2 id="bTitle">예산으로 뽑으면</h2>
+    <p class="hint" id="bHint"></p>
+    <ul class="list" id="bList"></ul>
+    <div id="histWrap" style="margin-top:14px">
+      <div class="stack" id="stack"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <div class="card" id="timeCard">
+    <h2>언제 사면 좋을까요?</h2>
+    <ul class="list" id="timeList"></ul>
+    <div class="tip" id="timeTip"></div>
+  </div>
+
+  <div class="card" id="trendCard">
+    <h2>처음과 비교하면</h2>
+    <ul class="list" id="trendList"></ul>
+  </div>
+
+  <div class="card">
+    <h2>가상으로 뽑아 보기</h2>
+    <p class="hint">지금 구성 그대로 내 예산만큼 한 번 뽑아 봐요. 실제 결과가 아니에요.</p>
+    <button class="ghost" id="sim1">한 번 뽑아 보기</button>
+    <div class="draws" id="draws"></div>
+    <p id="simTxt" style="margin-top:12px;font-weight:600"></p>
+  </div>
+
+  <p class="warn">사이트가 보여 주는 숫자가 정직하다는 가정에서 계산했어요. 누군가 뽑으면 숫자는 바로 바뀌어요. 확률 정보일 뿐 구매 권유가 아니에요. 오리파는 전체로 보면 파는 쪽이 이득을 보도록 짜인 경우가 많아요.</p>
+</section>
+
+<!-- ============ 비교 ============ -->
+<section id="tab-saved" class="hide">
+  <div class="hero">
+    <h1>내가 본 오리파 비교</h1>
+    <p>저장한 오리파를 환급률 순으로 보여 드려요. 이 기기에만 저장돼요.</p>
+  </div>
+  <div class="card" style="overflow-x:auto"><div id="savedBox"></div></div>
+</section>
+</main>
+
+<div class="cta" id="ctaCalc"><div class="wrap"><button class="btn" id="go">확률 계산하기</button></div></div>
+<div class="cta hide" id="ctaRes"><div class="wrap"><button class="btn sub" id="share">링크 복사</button><button class="btn" id="save">비교 목록에 저장</button></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.]/g,''));return isFinite(n)?n:NaN};
+const won=n=>isFinite(n)?Math.round(n).toLocaleString('ko-KR')+'원':'-';
+const pct=(p,d)=>{if(!isFinite(p))return '-';if(p>0&&p<0.0001)return '0.01% 미만';const v=p*100;if(d!=null)return v.toFixed(d)+'%';
+  return (v>=10?v.toFixed(1):v>=1?v.toFixed(2):v>=0.01?v.toFixed(3):v.toFixed(4))+'%'};
+const fmtInput=el=>{const n=num(el.value);if(el.value.trim()==='')return;if(isFinite(n))el.value=n.toLocaleString('ko-KR')};
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)}
+
+/* ---------- 히트 목록 ---------- */
+function hitRow(h={}){
+  const d=document.createElement('div');d.className='hit';
+  d.innerHTML=`<div class="top">
+      <input class="in hn" placeholder="등급 또는 카드명 (예: 레전더리)" value="${h.name??''}">
+      <div class="unit"><input class="in hk" inputmode="numeric" placeholder="남은 수" value="${h.k??''}"><em>개</em></div>
+      <button class="x" title="삭제">×</button></div>
+    <div class="bot">
+      <div class="row2" style="gap:8px">
+        <div class="unit"><input class="in hv" inputmode="numeric" placeholder="1장 시세" value="${h.v!=null&&h.v!==''?Number(h.v).toLocaleString('ko-KR'):''}"><em>원</em></div>
+        <div class="unit"><input class="in hk0" inputmode="numeric" placeholder="처음 수(선택)" value="${h.k0??''}"><em>개</em></div>
+      </div>
+      <a class="pav" target="_blank" rel="noopener">파빌리온 시세 ↗</a>
+    </div>`;
+  const nameI=d.querySelector('.hn'),a=d.querySelector('.pav');
+  const upd=()=>{const q=nameI.value.trim();a.href='https://pavilion-tcg.com/search?q='+encodeURIComponent(q);a.classList.toggle('dis',!q)};
+  nameI.addEventListener('input',upd);upd();
+  d.querySelector('.x').onclick=()=>{d.remove();if(!$$('.hit').length)$('#hits').append(hitRow())};
+  d.querySelector('.hv').addEventListener('blur',e=>fmtInput(e.target));
+  return d;
+}
+$('#addHit').onclick=()=>$('#hits').append(hitRow());
+$$('#price,#remain,#miss,#budget,#total0,#lastone,#fee,#bonusV,#bonusR').forEach(el=>el.addEventListener('blur',()=>fmtInput(el)));
+$$('#mode button').forEach(b=>b.onclick=()=>{$$('#mode button').forEach(x=>x.classList.toggle('on',x===b))});
+
+/* ---------- 상태 읽기/쓰기 ---------- */
+function readState(){
+  return {site:$('#site').value.trim(),pack:$('#pack').value.trim(),price:num($('#price').value),N:num($('#remain').value),
+    mode:$('#mode .on').dataset.v,miss:num($('#miss').value)||0,budget:num($('#budget').value),
+    N0:num($('#total0').value),lastone:num($('#lastone').value)||0,fee:num($('#fee').value)||0,
+    bonusV:num($('#bonusV').value)||0,bonusR:num($('#bonusR').value),
+    hits:$$('.hit').map(d=>({name:d.querySelector('.hn').value.trim(),k:num(d.querySelector('.hk').value),
+      v:num(d.querySelector('.hv').value),k0:num(d.querySelector('.hk0').value)})).filter(h=>h.name||isFinite(h.k))};
+}
+function writeState(s){
+  const set=(id,v)=>{$(id).value=(v==null||!isFinite(v)&&typeof v==='number')?'':(typeof v==='number'?v.toLocaleString('ko-KR'):v)};
+  set('#site',s.site||'');set('#pack',s.pack||'');set('#price',s.price);set('#remain',s.N);set('#miss',s.miss||'');
+  set('#budget',s.budget);set('#total0',s.N0);set('#lastone',s.lastone||'');set('#fee',s.fee||'');set('#bonusV',s.bonusV||'');set('#bonusR',s.bonusR);
+  $$('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.v===(s.mode||'hyper')));
+  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));
+  if(s.N0||s.lastone||s.fee||s.bonusV)$('details.more').open=true;
+}
+
+/* ---------- 계산 ---------- */
+// N번 안에 그룹(K개) 중 1장 이상
+function pAtLeastOne(N,K,n,mode){
+  if(K<=0||n<=0)return 0; if(mode==='fixed')return 1-Math.pow(1-K/N,n);
+  if(n>N-K)return 1; let lq=0; for(let j=0;j<n;j++)lq+=Math.log((N-K-j)/(N-j)); return 1-Math.exp(lq);
+}
+function simulate(s,n,sims){
+  const cats=s.hits.map(h=>({k:h.k,v:isFinite(h.v)?h.v:0}));
+  const K=cats.reduce((a,c)=>a+c.k,0), N=s.N, vals=new Float64Array(sims);
+  for(let t=0;t<sims;t++){
+    let rem=N, ks=cats.map(c=>c.k), val=0;
+    for(let d=0;d<n;d++){
+      const r=Math.random()*rem; let acc=0, got=-1;
+      for(let i=0;i<ks.length;i++){acc+=ks[i]; if(r<acc){got=i;break}}
+      if(got>=0){val+=cats[got].v; if(s.mode==='hyper')ks[got]--;} else val+=s.miss;
+      if(s.mode==='hyper')rem--;
+    }
+    if(s.mode==='hyper'&&n>=N)val+=s.lastone;
+    vals[t]=val;
+  }
+  return vals.sort();
+}
+function oneRun(s,n){
+  const ks=s.hits.map(h=>h.k);let rem=s.N;const out=[];
+  for(let d=0;d<n;d++){const r=Math.random()*rem;let acc=0,got=-1;
+    for(let i=0;i<ks.length;i++){acc+=ks[i];if(r<acc){got=i;break}}
+    out.push(got); if(s.mode==='hyper'){if(got>=0)ks[got]--;rem--;}}
+  return out;
+}
+
+function analyze(s){
+  const errs=[];
+  if(!(s.price>0))errs.push('한 번 가격');
+  if(!(s.N>0))errs.push('남은 횟수');
+  if(!s.hits.length||s.hits.some(h=>!(h.k>=0)))errs.push('히트별 남은 수');
+  if(errs.length)return {err:errs.join(', ')+'을(를) 넣어 주세요.'};
+  const K=s.hits.reduce((a,h)=>a+h.k,0);
+  if(K>s.N)return {err:'히트 수의 합이 남은 횟수보다 많아요. 숫자를 확인해 주세요.'};
+  const priced=s.hits.every(h=>isFinite(h.v)&&h.v>=0);
+  const H=s.hits.reduce((a,h)=>a+h.k*(isFinite(h.v)?h.v:0),0);
+  const ev=(H+(s.N-K)*s.miss)/s.N, rtp=ev/s.price;
+  const budget=isFinite(s.budget)&&s.budget>0?s.budget:100000;
+  const n=Math.max(1,Math.min(Math.floor(Math.max(0,budget-s.fee)/s.price),s.mode==='hyper'?s.N:1e9));
+  const cost=n*s.price+s.fee;
+  const r={s,K,priced,ev,rtp,n,cost,budget};
+  // 확률
+  r.single=s.hits.map(h=>({name:h.name||'(이름 없음)',p:h.k/s.N,k:h.k}));
+  r.anyHitN=pAtLeastOne(s.N,K,n,s.mode);
+  // 판정 (환급률 기준)
+  r.bonusGo=false;
+  if(s.bonusV>0&&isFinite(s.bonusR)&&s.bonusR>0){r.bonusNet=s.bonusR*(ev-s.price)+s.bonusV;r.bonusGo=priced&&r.bonusNet>0}
+  if(!priced) r.v='none';
+  else if(rtp>=1||r.bonusGo) r.v='go';
+  else if(rtp>=0.85) r.v='wait';
+  else r.v='no';
+  // 처음 대비
+  if(isFinite(s.N0)&&s.N0>=s.N&&s.hits.some(h=>isFinite(h.k0))){
+    const k0=s.hits.reduce((a,h)=>a+(isFinite(h.k0)?h.k0:h.k),0);
+    const opened=s.N0-s.N;
+    r.trend={ratio:(K/s.N)/(k0/s.N0),opened,expOut:k0*opened/s.N0,actOut:k0-K};
+    const top=s.hits[0]; if(isFinite(top.k0)&&top.k0>0)r.trend.topRatio=(top.k/s.N)/(top.k0/s.N0);
+    if(r.v==='wait'&&r.trend.ratio>1.05)r.waitWhy='up';
+    if(priced&&isFinite(top.k0)&&top.k0>0&&r.trend.topRatio<=0.5&&r.v!=='go')r.v='no';
+  }
+  // 기다릴 때 기준선: 히트가 그대로 남아 있을 때 환급률 100%가 되는 남은 횟수
+  if(priced&&rtp<1&&s.mode==='hyper'&&s.price>s.miss){
+    const Nstar=Math.floor((H-s.miss*K)/(s.price-s.miss));
+    if(Nstar>=K&&Nstar<s.N){
+      const draws=s.N-Nstar; let lq=0; for(let j=0;j<draws;j++)lq+=Math.log((s.N-K-j)/(s.N-j));
+      r.wait={Nstar,pKeep:Math.exp(lq)};
+    }
+  }
+  // 몬테카를로
+  if(priced){
+    const sims=n>3000?2000:n>500?5000:10000;
+    const vals=simulate(s,n,sims);
+    let wins=0; for(const v of vals)if(v>=cost)wins++;
+    r.win=wins/vals.length; r.median=vals[Math.floor(vals.length/2)]; r.p5=vals[Math.floor(vals.length*0.05)];
+    r.var5=cost-r.p5; r.vals=vals;
+  }
+  return r;
+}
+
+/* ---------- 결과 그리기 ---------- */
+const V={go:['추천','지금 사도 괜찮아요','한 번의 기대값이 가격 이상이에요.'],
+  wait:['보류','조금 더 지켜보세요','기대값이 가격보다 조금 낮아요. 남은 구성이 바뀌면 다시 확인해 보세요.'],
+  no:['비추천','지금은 사지 않는 게 좋아요','평균적으로 낸 돈보다 받는 가치가 많이 적어요.'],
+  none:['판정 보류','시세를 넣으면 판정해 드릴게요','지금은 확률만 계산했어요. 히트마다 시세를 넣어 주세요.']};
+function render(r){
+  const s=r.s;
+  $('#vCard').className='verdict v-'+r.v;
+  $('#vBadge').textContent=V[r.v][0];
+  $('#vTitle').textContent=V[r.v][1];
+  let desc=V[r.v][2];
+  if(r.v==='go'&&r.rtp<1&&r.bonusGo)desc=`다음 확정 보너스까지 ${s.bonusR.toLocaleString()}회를 모두 사면 평균 ${won(r.bonusNet)} 이득이에요. 다른 사람이 먼저 사면 보너스를 놓칠 수 있어요.`;
+  if(r.v==='no'&&r.trend&&r.trend.topRatio<=0.5&&r.rtp>=0.85)desc='가장 좋은 히트가 많이 빠져서 처음 확률의 절반 이하예요.';
+  if(r.waitWhy==='up')desc+=' 처음보다 좋아지는 중이에요.';
+  $('#vDesc').textContent=desc;
+  $('#kRtp').textContent=r.priced?pct(r.rtp,1):'-';
+  $('#kWinLbl').textContent=`승률 (${won(r.budget)} 기준)`;
+  $('#kWin').textContent=r.priced?pct(r.win,1):'-';
+
+  $('#probList').innerHTML=r.single.map(h=>`<li><span>${esc(h.name)} <small style="color:var(--faint)">${h.k.toLocaleString()}개</small></span><b>${pct(h.p)}<br><small style="color:var(--faint);font-weight:600">${h.p>0?'약 '+Math.round(1/h.p).toLocaleString()+'번에 1번':'없음'}</small></b></li>`).join('')
+    +`<li><span>히트 아무거나</span><b>${pct(r.K/s.N)}</b></li>`
+    +(r.priced?`<li><span>한 번의 기대값</span><b>${won(r.ev)} <small style="color:var(--faint)">/ 가격 ${won(s.price)}</small></b></li>`:'');
+
+  $('#bTitle').textContent=`${won(r.cost)}으로 ${r.n.toLocaleString()}번 뽑으면`;
+  $('#bHint').textContent=r.priced?'10,000번 가상으로 뽑아 본 결과예요.':'시세를 넣으면 승률과 손실 범위도 보여 드려요.';
+  let bl=`<li><span>히트 1장 이상 나올 확률</span><b>${pct(r.anyHitN,1)}</b></li>`;
+  if(r.priced)bl+=`<li><span>본전 이상 (승률)</span><b>${pct(r.win,1)}</b></li>
+    <li><span>받는 가치 (중간값)</span><b>${won(r.median)}</b></li>
+    <li><span>최악 5%일 때 손실</span><b style="color:var(--red)">${won(r.var5)}</b></li>`;
+  $('#bList').innerHTML=bl;
+  $('#histWrap').classList.toggle('hide',!r.priced);
+  if(r.priced)drawHist(r.vals,r.cost);
+
+  // 언제
+  let tl='',tip='';
+  if(s.mode==='fixed'){tl='<li><span>뽑기 방식</span><b>확률 고정</b></li>';tip='확률이 고정된 방식이라 언제 사도 확률이 같아요. 순서를 노려서 얻는 이득은 없어요.';}
+  else{
+    tl+=`<li><span>남은 횟수</span><b>${s.N.toLocaleString()}회</b></li>`;
+    if(r.v==='go')tip='지금 기준으로 이미 기대값이 가격 이상이에요. 누군가 히트를 뽑으면 바로 바뀌니 사기 직전에 숫자를 다시 확인하세요.';
+    else if(r.wait){tl+=`<li><span>이 횟수 이하가 되면 추천</span><b>${r.wait.Nstar.toLocaleString()}회</b></li>
+      <li><span>그때까지 히트가 그대로 남을 확률</span><b>${pct(r.wait.pKeep)}</b></li>`;
+      tip=(r.wait.pKeep<0.01?'사실상 오기 어려운 상황이에요. ':'')+`다른 사람들이 ${(s.N-r.wait.Nstar).toLocaleString()}번 더 뽑을 동안 히트가 하나도 안 나오면 추천으로 바뀌어요. 평균적으로는 기다려도 확률이 오르지 않아요. 기다림의 이득은 오를 때만 사고 내릴 때는 안 사는 데서 나와요.`;}
+    else if(r.priced)tip='히트가 그대로 남아도 남은 횟수가 줄어서 추천이 되기는 어려운 구성이에요.';
+    else tip='시세를 넣으면 몇 회 이하로 줄었을 때 사면 좋은지 계산해 드려요.';
+    if(s.bonusV>0&&isFinite(s.bonusR)&&r.priced){tl+=`<li><span>다음 확정 보너스까지 모두 사면</span><b style="color:${r.bonusNet>0?'var(--green)':'var(--red)'}">${r.bonusNet>0?'+':''}${won(r.bonusNet)}</b></li>`;}
+    if(r.priced&&s.N<=5000){const all=r.ev*s.N+s.lastone-s.price*s.N;tl+=`<li><span>남은 걸 전부 사면${s.lastone?' (라스트원 포함)':''}</span><b style="color:${all>0?'var(--green)':'var(--red)'}">${all>0?'+':''}${won(all)}</b></li>`}
+  }
+  $('#timeList').innerHTML=tl;$('#timeTip').textContent=tip;
+
+  $('#trendCard').classList.toggle('hide',!r.trend);
+  if(r.trend){const t=r.trend;
+    $('#trendList').innerHTML=`<li><span>히트 확률, 처음 대비</span><b style="color:${t.ratio>=1?'var(--green)':'var(--red)'}">${t.ratio.toFixed(2)}배 ${t.ratio>=1?'좋아짐':'나빠짐'}</b></li>`
+    +(t.topRatio!=null?`<li><span>${esc(s.hits[0].name||'첫 히트')} 확률, 처음 대비</span><b style="color:${t.topRatio>=1?'var(--green)':'var(--red)'}">${t.topRatio.toFixed(2)}배</b></li>`:'')
+    +`<li><span>지금까지 나간 히트</span><b>${t.actOut.toLocaleString()}개 <small style="color:var(--faint)">/ 기대 ${t.expOut.toFixed(1)}개</small></b></li>`;}
+
+  $('#draws').innerHTML='';$('#simTxt').textContent='';
+}
+function drawHist(vals,cost){
+  let a=0,b=0,c=0,d=0;
+  for(const v of vals){if(v<cost*0.5)a++;else if(v<cost)b++;else if(v<cost*2)c++;else d++}
+  const n=vals.length,seg=[[a,'var(--red)','절반도 못 건짐'],[b,'var(--orange)','본전 미만'],[c,'var(--blue)','본전~2배'],[d,'var(--green)','2배 이상']];
+  $('#stack').innerHTML=seg.map(([x,col])=>x?`<i style="width:${x/n*100}%;background:${col}"></i>`:'').join('');
+  $('#legend').innerHTML=seg.map(([x,col,l])=>`<span style="--c:${col}">${l} ${pct(x/n,1)}</span>`).join('');
+}
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let last=null;
+function run(){
+  const s=readState(),r=analyze(s);
+  if(r.err){toast(r.err);return}
+  last=r;render(r);
+  $('#tab-calc').classList.add('hide');$('#result').style.display='block';
+  $('#ctaCalc').classList.add('hide');$('#ctaRes').classList.remove('hide');
+  window.scrollTo({top:0});
+  try{history.replaceState(null,'','#'+encodeURIComponent(JSON.stringify(compact(s))))}catch(e){}
+}
+const compact=s=>({site:s.site,pack:s.pack,price:s.price,N:s.N,mode:s.mode,miss:s.miss,budget:s.budget,N0:isFinite(s.N0)?s.N0:null,
+  lastone:s.lastone,fee:s.fee,bonusV:s.bonusV,bonusR:isFinite(s.bonusR)?s.bonusR:null,hits:s.hits.map(h=>({name:h.name,k:h.k,v:isFinite(h.v)?h.v:null,k0:isFinite(h.k0)?h.k0:null}))});
+$('#go').onclick=run;
+$('#back').onclick=()=>{$('#result').style.display='none';$('#tab-calc').classList.remove('hide');$('#ctaRes').classList.add('hide');$('#ctaCalc').classList.remove('hide');window.scrollTo({top:0})};
+$('#sim1').onclick=()=>{
+  if(!last)return;const s=last.s,n=Math.min(last.n,400),out=oneRun(s,n);let val=0,hits=0;
+  $('#draws').innerHTML=out.map(g=>{if(g>=0){hits++;val+=isFinite(s.hits[g].v)?s.hits[g].v:0;return `<i class="${g===0?'h2':'h'}" title="${esc(s.hits[g].name)}"></i>`}val+=s.miss;return '<i></i>'}).join('');
+  const names={};out.forEach(g=>{if(g>=0){const k=s.hits[g].name||'히트';names[k]=(names[k]||0)+1}});
+  const cost=n*s.price;
+  $('#simTxt').textContent=hits?`${n}번 중 ${Object.entries(names).map(([k,v])=>k+' '+v+'장').join(', ')}`+(last.priced?` · 받은 가치 ${won(val)} (쓴 돈 ${won(cost)})`:''):`${n}번 뽑아서 히트가 하나도 안 나왔어요.`+(last.priced?` 쓴 돈 ${won(cost)}`:'');
+};
+$('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('링크를 복사했어요')}catch(e){toast('주소창의 링크를 복사해 주세요')}};
+
+/* ---------- 비교 목록 ---------- */
+const KEY='oripa-odds-saved-v1';
+const loadSaved=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}};
+const storeSaved=a=>{try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){}};
+$('#save').onclick=()=>{
+  if(!last)return;const a=loadSaved();
+  a.unshift({id:Date.now(),at:new Date().toISOString(),state:compact(last.s),v:last.v,rtp:last.priced?last.rtp:null,win:last.priced?last.win:null,
+    p:last.K/last.s.N,budget:last.budget});
+  storeSaved(a.slice(0,50));renderSaved();toast('비교 목록에 저장했어요');
+};
+function renderSaved(){
+  const a=loadSaved();$('#savedN').textContent=a.length?a.length:'';
+  if(!a.length){$('#savedBox').innerHTML='<p class="empty">아직 저장한 오리파가 없어요.<br>계산한 뒤 "비교 목록에 저장"을 눌러 주세요.</p>';return}
+  a.sort((x,y)=>(y.rtp??-1)-(x.rtp??-1));
+  const cls={go:'go',wait:'wait',no:'no',none:'none'},lbl={go:'추천',wait:'보류',no:'비추천',none:'시세 필요'};
+  $('#savedBox').innerHTML=`<table class="cmp"><tr><th>오리파</th><th>판정</th><th>환급률</th><th>승률</th><th></th></tr>`+a.map(x=>{
+    const d=new Date(x.at);const when=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `<tr><td><b>${esc(x.state.pack||'이름 없음')}</b><small>${esc(x.state.site||'')} · ${when}</small></td>
+    <td><span class="chip ${cls[x.v]}">${lbl[x.v]}</span></td><td><b>${x.rtp!=null?pct(x.rtp,1):'-'}</b></td>
+    <td><b>${x.win!=null?pct(x.win,1):'-'}</b><small>${won(x.budget)}</small></td>
+    <td style="white-space:nowrap"><button class="ghost" data-open="${x.id}" style="height:32px;padding:0 10px">열기</button> <button class="x" data-del="${x.id}">×</button></td></tr>`}).join('')+'</table>'
+    +'<p class="small" style="margin:14px 0 0">저장할 때의 숫자예요. 지금 사이트 숫자는 달라졌을 수 있어요.</p>';
+  $$('[data-open]').forEach(b=>b.onclick=()=>{const x=loadSaved().find(y=>y.id==b.dataset.open);if(!x)return;writeState(x.state);switchTab('calc');run()});
+  $$('[data-del]').forEach(b=>b.onclick=()=>{storeSaved(loadSaved().filter(y=>y.id!=b.dataset.del));renderSaved()});
+}
+function switchTab(t){
+  $$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  const calc=t==='calc';
+  $('#tab-saved').classList.toggle('hide',calc);
+  if(calc){$('#result').style.display='none';$('#tab-calc').classList.remove('hide');$('#ctaCalc').classList.remove('hide');$('#ctaRes').classList.add('hide')}
+  else{$('#tab-calc').classList.add('hide');$('#result').style.display='none';$('#ctaCalc').classList.add('hide');$('#ctaRes').classList.add('hide');renderSaved()}
+  window.scrollTo({top:0});
+}
+$$('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+
+/* ---------- 예시 · 시작 ---------- */
+$('#example').onclick=()=>{
+  writeState({site:'예시 사이트',pack:'예시 오리파',price:1900,N:15590,mode:'hyper',miss:100,budget:100000,N0:30000,
+    hits:[{name:'레전더리 카드',k:4,v:300000,k0:7},{name:'에픽 카드',k:17,v:40000,k0:29}]});
+  toast('예시 값을 넣었어요. 시세는 가상의 값이에요');
+};
+(function init(){
+  let s=null;
+  if(location.hash.length>2){try{s=JSON.parse(decodeURIComponent(location.hash.slice(1)))}catch(e){}}
+  if(s){writeState(s);run()}else $('#hits').append(hitRow());
+  renderSaved();
+})();
+</script>
+</body>
+</html>
