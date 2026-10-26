@@ -62,7 +62,7 @@ async function kreamSearch(queries) {
           }
         }
         out[q] = list;
-        out.__debug = (out.__debug || '') + `[${q}] n=${list.length} ${JSON.stringify(lines.slice(14, 24))}\n`;
+        out.__debug = (out.__debug || '') + `[${q}] n=${list.length} lines=${lines.length} ${JSON.stringify(lines.slice(0, 30)).slice(0, 700)}\n`;
       } catch { out[q] = []; } finally { await page.close().catch(() => {}); }
     }
   } finally { await browser.close().catch(() => {}); }
