@@ -225,23 +225,24 @@ module.exports = async function handler(req, res) {
       if (!u) return res.status(400).json({ error: '열 수 없는 링크예요. https:// 로 시작하는 오리파 페이지 주소를 넣어 주세요' });
       let html;
       try { html = await fetchPage(u); } catch { return res.status(422).json({ error: '페이지를 열지 못했어요. 스크린샷으로 올려 주세요' }); }
-      let { visible, text } = pageText(html);
+      let { visible, text } = pageText(html); let rendered = 'no', renderErr = null;
       // 내용이 비어 있거나 '불러오는 중'이면 진짜 브라우저로 열어서 다시 읽기
       if (visible.length < 1500 || /불러오는 중|loading/i.test(visible.slice(0, 400))) {
         try {
           const { renderText } = require('./_render');
           const r = await renderText(u.href);
           const body = (r.body || '').split('\n').map(x => x.trim()).filter(Boolean).join(' | ');
+          rendered = 'tried:' + body.length;
           if (body.length > visible.length) {
             visible = body;
             text = [`제목: ${r.title}`, r.ld ? `상품 데이터(JSON-LD): ${r.ld}` : '', `본문: ${body}`].filter(Boolean).join('\n').slice(0, MAX_TEXT);
           }
-        } catch (e) { /* 브라우저로도 못 읽으면 아래 안내 */ }
+        } catch (e) { renderErr = String(e && e.message || e).slice(0, 200); }
       }
       if (visible.length < 300) return res.status(422).json({ error: '이 사이트는 링크로 내용을 읽을 수 없어요. 스크린샷으로 올려 주세요' });
       const f = await askClaude([{ type: 'text', text: pagePrompt(u.href, text) }]);
       if (!f) return res.status(502).json({ error: '페이지에서 정보를 찾지 못했어요' });
-      return res.status(200).json({ fields: finish(f), source: 'url' });
+      return res.status(200).json({ fields: finish(f), source: 'url', rendered, renderErr });
     }
 
     // 스크린샷
