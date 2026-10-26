@@ -135,6 +135,9 @@ details.more .inner{padding-top:12px}
 #upCard.drag{border-color:var(--accent-text);background:var(--accent-l)}
 .thumbs{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .thumbs img{width:64px;height:64px;object-fit:cover;border-radius:12px;background:var(--input)}
+.linkrow{display:flex;gap:8px;margin-top:14px}
+.linkrow .in{height:48px;font-size:15px;font-weight:500}
+.linkrow .ghost{height:48px;padding:0 18px;background:var(--accent-ink);color:var(--accent);font-weight:700}
 .upmsg{font-size:14px;color:var(--sub);margin-top:12px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--accent-l);border-top-color:var(--accent-text);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -161,6 +164,7 @@ details.more .inner{padding-top:12px}
       <div><b>스크린샷으로 자동 채우기</b><span id="upSub">사진을 여기로 끌어오거나, 눌러서 첨부하세요. 붙여넣기(Ctrl+V)도 돼요 (최대 3장)</span></div>
       <input type="file" id="upFile" accept="image/*" multiple hidden>
     </label>
+    <div class="linkrow"><input class="in" id="upUrl" type="url" inputmode="url" placeholder="또는 오리파 링크를 붙여넣으세요 (https://...)"><button class="ghost" id="upGo">읽기</button></div>
     <div class="thumbs" id="thumbs"></div>
     <p class="upmsg hide" id="upMsg"></p>
   </div>
@@ -563,7 +567,7 @@ $('#example').onclick=()=>{
 let upOn=false;
 fetch('/api/extract').then(r=>r.json()).then(j=>{upOn=!!j.enabled;upState()}).catch(()=>upState());
 function upState(){
-  $('#upLbl').classList.toggle('off',!upOn);$('#upFile').disabled=!upOn;
+  $('#upLbl').classList.toggle('off',!upOn);$('#upFile').disabled=!upOn;$('#upUrl').disabled=!upOn;$('#upGo').disabled=!upOn;
   $('#upSub').textContent=upOn?'사진을 여기로 끌어오거나, 눌러서 첨부하세요. 붙여넣기(Ctrl+V)도 돼요 (최대 3장)':'준비 중이에요. 지금은 아래 칸에 직접 넣어 주세요.';
 }
 function shrink(file){return new Promise((ok,no)=>{
@@ -582,7 +586,24 @@ upCard.addEventListener('drop',e=>handleFiles([...e.dataTransfer.files]));
 // 카드 밖에 떨어뜨려도 브라우저가 사진을 열지 않게
 window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
 document.addEventListener('paste',e=>{if(!$('#tab-calc')||$('#tab-calc').classList.contains('hide'))return;
-  const f=[...(e.clipboardData?.files||[])].filter(x=>x.type.startsWith('image/'));if(f.length){e.preventDefault();handleFiles(f)}});
+  const f=[...(e.clipboardData?.files||[])].filter(x=>x.type.startsWith('image/'));if(f.length){e.preventDefault();handleFiles(f);return}
+  const t=(e.clipboardData?.getData('text')||'').trim();
+  if(/^https?:\/\/\S+$/.test(t)&&!(document.activeElement&&document.activeElement.matches('input'))){e.preventDefault();$('#upUrl').value=t;readLink()}});
+$('#upGo').onclick=()=>readLink();
+$('#upUrl').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();readLink()}});
+async function readLink(){
+  if(!upOn){toast('자동 읽기가 아직 준비 중이에요');return}
+  const url=$('#upUrl').value.trim();
+  if(!/^https?:\/\//.test(url)){toast('https:// 로 시작하는 링크를 넣어 주세요');return}
+  $('#thumbs').innerHTML='';
+  upMsg('<span class="spin"></span>페이지를 읽고 있어요… (10~20초 걸려요)',true);
+  try{
+    const r=await fetch('/api/extract',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url})});
+    const j=await r.json();
+    if(!r.ok){upMsg(j.error||'읽지 못했어요. 스크린샷으로 올려 주세요.');return}
+    applyFields(j.fields,url);
+  }catch(err){upMsg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.')}
+}
 async function handleFiles(all){
   if(!upOn){toast('스크린샷 읽기가 아직 준비 중이에요');return}
   const files=all.filter(f=>f.type.startsWith('image/')).slice(0,3);
@@ -598,22 +619,26 @@ async function handleFiles(all){
     applyFields(j.fields);
   }catch(err){upMsg('연결에 실패했어요. 잠시 후 다시 시도해 주세요.')}
 }
-function applyFields(f){
+function applyFields(f,url){
   const s=readState(),got=[],miss=[];
   const take=(key,val,label)=>{if(val!=null&&val!==''&&!(typeof val==='number'&&!isFinite(val))){s[key]=val;got.push(label)}else miss.push(label)};
   take('site',f.site,'사이트');take('pack',f.pack,'이름');take('price',f.price,'가격');take('N',f.remaining,'남은 횟수');
   if(f.total!=null)s.N0=f.total;
   if(f.fixed_probability===true)s.mode='fixed';else if(f.fixed_probability===false)s.mode='hyper';
   const old=Object.fromEntries(s.hits.map(h=>[h.name,h.v]));
-  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>({name:h.name,kind:KINDS[h.kind]?h.kind:'card',k:h.remaining??NaN,k0:h.initial??NaN,v:old[h.name]??NaN}));got.push('히트 '+f.hits.length+'개')}
+  if(Array.isArray(f.hits)&&f.hits.length){s.hits=f.hits.map(h=>({name:h.name,kind:KINDS[h.kind]?h.kind:'card',k:h.remaining??NaN,k0:h.initial??NaN,v:isFinite(old[h.name])?old[h.name]:(h.value??NaN)}));got.push('히트 '+f.hits.length+'개')}
   else miss.push('히트 목록');
+  if(isFinite(f.last_one_price)&&f.last_one_price>0)s.lastone=f.last_one_price;
+  if(!s.site&&url){try{s.site=new URL(url).hostname.replace(/^www\./,'')}catch(e){}}
   writeState(s);
   ['#site','#pack','#price','#remain'].forEach((id,i)=>{if([f.site,f.pack,f.price,f.remaining][i]!=null)$(id).classList.add('filled')});
   $$('.hit .hn,.hit .hk').forEach(el=>{if(el.value)el.classList.add('filled')});
   setTimeout(()=>$$('.filled').forEach(el=>el.classList.remove('filled')),6000);
   let t=`채운 항목: ${got.join(', ')||'없음'}.`;
   if(miss.length)t+=` 못 찾은 항목: ${miss.join(', ')}.`;
-  t+=' 숫자가 화면과 같은지 꼭 확인하고, 히트별 시세는 파빌리온에서 넣어 주세요.';
+  const priced=(f.hits||[]).filter(h=>h.value!=null).length;
+  if(priced)t+=` 시세 칸에는 사이트가 적은 상품 가격의 등급별 평균을 넣었어요. 사이트 가격은 실제 시세보다 높게 적힌 경우가 많으니 파빌리온 등으로 꼭 확인해 주세요.`;
+  else t+=' 숫자가 화면과 같은지 꼭 확인하고, 히트별 시세는 파빌리온에서 넣어 주세요.';
   if(f.last_one)t+=` 라스트원: ${f.last_one}.`;if(f.bonus)t+=` 보너스: ${f.bonus}.`;
   upMsg(t);toast('자동으로 채웠어요. 숫자를 확인해 주세요');
 }
