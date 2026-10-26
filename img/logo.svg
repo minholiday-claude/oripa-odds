@@ -1,10 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="16" fill="#07150A"/>
   <g fill="#39FC72">
-    <circle cx="27" cy="25" r="12.5"/>
-    <ellipse cx="34" cy="44" rx="20" ry="12"/>
-    <path d="M47 39 C55 33,59 41,53 47 Z"/>
-    <path d="M15 23 C9 22,7 27,10 29 C12 31,17 30,19 28 Z"/>
-    <path d="M25 14 C24 8,31 7,32 11 C30 10,28 11,28 14 Z"/>
+    <circle cx="27" cy="23" r="11"/>
+    <path d="M17 20 L8 24 L17 27 Z"/>
+    <path d="M12 31 H48 L54 26 C56 42,47 52,32 52 C20 52,12 45,12 31 Z"/>
   </g>
 </svg>
