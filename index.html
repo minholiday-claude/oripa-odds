@@ -82,6 +82,8 @@ label.f span{display:block;font-size:14px;color:var(--sub);font-weight:600;margi
 .item .det{display:none;font-size:12px;color:var(--faint);margin-top:4px;line-height:1.4}
 .vnote{font-size:12px;color:var(--orange);font-weight:600;margin-top:6px}
 .miss-note{font-size:12px;font-weight:700;color:var(--orange);margin:8px 2px 0}
+@keyframes needp{0%,100%{box-shadow:inset 0 0 0 2px var(--orange)}50%{box-shadow:inset 0 0 0 2px transparent}}
+.in.need{animation:needp .5s ease-in-out 3}
 .ip.pp{box-shadow:inset 0 0 0 1.5px var(--accent-text)!important}
 .ip.pw{box-shadow:inset 0 0 0 1.5px var(--orange)!important}
 .item .det .src{font-style:normal;color:var(--accent-text)}
@@ -611,7 +613,7 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 let last=null;
 function run(){
   const s=readState(),r=analyze(s);
-  if(r.err){toast(r.err);return}
+  if(r.err){toast(r.err);goToNeeded();return}
   last=r;render(r);
   $('#tab-calc').classList.add('hide');$('#result').style.display='block';
   $('#ctaCalc').classList.add('hide');$('#ctaRes').classList.remove('hide');
@@ -803,6 +805,20 @@ function addHelpBadges(){
     b.onclick=e=>{e.preventDefault();e.stopPropagation();c.classList.toggle('help')};h.append(b)});
 }
 addHelpBadges();
+/* ---------- 넣어야 할 칸으로 스크롤 ---------- */
+function goToNeeded(){
+  const empty=el=>el&&!el.value.trim();
+  let t=null;
+  if(empty($('#price')))t=$('#price');
+  else if(empty($('#remain')))t=$('#remain');
+  else{for(const d of $$('.hit')){const ip=[...d.querySelectorAll('.ip')].find(empty);if(ip){d.querySelector('details.items').open=true;t=ip;break}}}
+  if(!t)return false;
+  t.scrollIntoView({behavior:'smooth',block:'center'});
+  t.classList.remove('need');void t.offsetWidth;t.classList.add('need');
+  setTimeout(()=>t.focus({preventScroll:true}),450);
+  return true;
+}
+
 /* ---------- 파빌리온 시세 자동 조회 ---------- */
 async function autoPrice(miss=[]){
   const rows=$$('.hit').filter(d=>d._items),req=[];
@@ -810,7 +826,7 @@ async function autoPrice(miss=[]){
     const card=it.card||cleanQ(it.name),kind=/카드/.test(it.name)&&!/카드팩/.test(it.name)?'card':guessKind(card);
     if(card)req.push({key:ri+'-'+ii,kind,card,name:it.name,rarity:it.rarity,set:it.set,language:it.language,variant:it.variant,grade:it.grade});
   }));
-  if(!req.length)return;
+  if(!req.length){goToNeeded();return}
   upMsg(loadingHtml('데덴네가 시세를 찾고 있어요'),true);
   try{
     const r=await fetch('/api/price',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:req})});
@@ -831,7 +847,8 @@ async function autoPrice(miss=[]){
     const parts=[`시세 ${ok}개 넣었어요`];if(warn)parts.push(`${warn}개는 확인 필요`);if(tail)parts.push(`${tail}개는 못 찾았어요`);
     if(miss.length)parts.unshift(`못 찾은 항목: ${miss.join(', ')}`);
     upMsg(parts.join(' · '));
-  }catch(e){upMsg('시세를 가져오지 못했어요')}
+    goToNeeded();
+  }catch(e){upMsg('시세를 가져오지 못했어요');goToNeeded()}
 }
 
 (function init(){
