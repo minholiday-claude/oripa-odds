@@ -96,6 +96,12 @@ details.more .inner{padding-top:12px}
 /* 결과 */
 #result{display:none}
 .verdict{border-radius:var(--r);padding:26px 22px;margin-bottom:12px;background:var(--card);border:1px solid var(--line)}
+.verdict{position:relative}
+.mascot{position:absolute;right:16px;top:14px;width:96px;height:90px;display:none}
+.mascot svg{width:100%;height:100%}
+.v-no .mascot{display:block;animation:dd-shake .5s ease-in-out 2}
+@keyframes dd-shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+.v-no h2,.v-no .badge{margin-right:96px}
 .verdict .badge{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:15px;padding:6px 12px;border-radius:999px}
 .verdict h2{font-size:28px;font-weight:800;line-height:1.3;margin:14px 0 6px;letter-spacing:-.02em}
 .verdict p{color:var(--sub)}
@@ -244,6 +250,7 @@ details.more .inner{padding-top:12px}
 <section id="result">
   <div class="hero" style="padding-bottom:10px"><button class="ghost" id="back">← 다시 입력</button></div>
   <div class="verdict" id="vCard">
+    <div class="mascot" id="vMascot"></div>
     <span class="badge" id="vBadge"></span>
     <h2 id="vTitle"></h2>
     <p id="vDesc"></p>
@@ -355,11 +362,17 @@ function hitRow(h={}){
     nameI.placeholder=o.namePh;vI.placeholder=o.valPh;};
   nameI.addEventListener('input',upd);upd();
   d.querySelectorAll('.kinds button').forEach(b=>b.onclick=()=>{d.dataset.kind=b.dataset.k;d.querySelectorAll('.kinds button').forEach(x=>x.classList.toggle('on',x===b));upd()});
-  d.querySelector('.x').onclick=()=>{d.remove();if(!$$('.hit').length)$('#hits').append(hitRow())};
+  d.querySelector('.x').onclick=()=>{d.remove();ensureBlank()};
+  // 마지막 칸에 입력을 시작하면 빈 칸을 하나 자동으로 붙임
+  [nameI,d.querySelector('.hk')].forEach(el=>el.addEventListener('input',()=>{if(d===$$('.hit').at(-1)&&el.value.trim())ensureBlank()}));
   d.querySelector('.hv').addEventListener('blur',e=>fmtInput(e.target));
   return d;
 }
 $('#addHit').onclick=()=>$('#hits').append(hitRow());
+// 맨 끝에 빈 히트 칸이 늘 하나 있도록
+function ensureBlank(){const rows=$$('.hit'),last=rows.at(-1);
+  const blank=d=>!d.querySelector('.hn').value.trim()&&!d.querySelector('.hk').value.trim()&&!d._items;
+  if(!last||!blank(last))$('#hits').append(hitRow());}
 $$('#price,#remain,#miss,#budget,#total0,#lastone,#fee,#bonusV,#bonusR').forEach(el=>el.addEventListener('blur',()=>fmtInput(el)));
 $$('#mode button').forEach(b=>b.onclick=()=>{$$('#mode button').forEach(x=>x.classList.toggle('on',x===b))});
 
@@ -377,7 +390,7 @@ function writeState(s){
   set('#site',s.site||'');set('#pack',s.pack||'');set('#price',s.price);set('#remain',s.N);set('#miss',s.miss||'');
   set('#budget',s.budget);set('#total0',s.N0);set('#lastone',s.lastone||'');set('#fee',s.fee||'');set('#bonusV',s.bonusV||'');set('#bonusR',s.bonusR);
   $$('#mode button').forEach(x=>x.classList.toggle('on',x.dataset.v===(s.mode||'hyper')));
-  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,kind:h.kind,items:h.items,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));
+  $('#hits').innerHTML='';(s.hits&&s.hits.length?s.hits:[{}]).forEach(h=>$('#hits').append(hitRow({name:h.name,kind:h.kind,items:h.items,k:isFinite(h.k)?h.k:'',v:isFinite(h.v)?h.v:'',k0:isFinite(h.k0)?h.k0:''})));ensureBlank();
   if(s.N0||s.lastone||s.fee||s.bonusV)$('details.more').open=true;
 }
 
@@ -472,6 +485,7 @@ const V={go:['추천','지금 사도 괜찮아요','한 번의 기대값이 가�
 function render(r){
   const s=r.s;
   $('#vCard').className='verdict v-'+r.v;
+  $('#vMascot').innerHTML=r.v==='no'?SHOCK_SVG:'';
   $('#vBadge').textContent=V[r.v][0];
   $('#vTitle').textContent=V[r.v][1];
   let desc=V[r.v][2];
@@ -597,21 +611,35 @@ $('#example').onclick=()=>{
   toast('예시 값을 넣었어요. 시세는 가상의 값이에요');
 };
 /* ---------- 로딩 캐릭터 (데덴네) — 바꿀 땐 이 그림만 교체 ---------- */
-const LOADER_SVG=`<svg viewBox="0 0 100 100" aria-hidden="true">
-  <path d="M44 22 C40 10,30 6,22 4" stroke="#3A2A1A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <path d="M56 22 C60 10,70 6,78 4" stroke="#3A2A1A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <circle cx="21" cy="4.5" r="4" fill="#FFD93B" stroke="#3A2A1A" stroke-width="1.5"/>
-  <circle cx="79" cy="4.5" r="4" fill="#FFD93B" stroke="#3A2A1A" stroke-width="1.5"/>
-  <circle cx="20" cy="34" r="19" fill="#F29B38"/><circle cx="20" cy="34" r="12" fill="#5B3A1E"/>
-  <circle cx="80" cy="34" r="19" fill="#F29B38"/><circle cx="80" cy="34" r="12" fill="#5B3A1E"/>
-  <ellipse cx="50" cy="58" rx="30" ry="27" fill="#F7A944"/>
-  <ellipse cx="50" cy="68" rx="18" ry="13" fill="#FFF3D6"/>
-  <circle cx="39" cy="55" r="4.2" fill="#2B1A0E"/><circle cx="61" cy="55" r="4.2" fill="#2B1A0E"/>
-  <circle cx="40.4" cy="53.6" r="1.4" fill="#fff"/><circle cx="62.4" cy="53.6" r="1.4" fill="#fff"/>
-  <ellipse cx="28" cy="66" rx="6" ry="4.5" fill="#F28A2E"/><ellipse cx="72" cy="66" rx="6" ry="4.5" fill="#F28A2E"/>
-  <path d="M46 66 Q50 70 54 66" stroke="#2B1A0E" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <path d="M48 63 L50 65 L52 63 Z" fill="#2B1A0E"/>
+const dd=(face)=>`<svg viewBox="0 0 120 112" aria-hidden="true">
+  <path d="M86 70 C104 60,110 40,104 22 C102 16,108 12,112 16 M104 22 C110 20,114 24,112 30" stroke="#1E1E1E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  <circle cx="33" cy="25" r="18" fill="#1E1E1E"/><ellipse cx="35" cy="26.5" rx="12" ry="13" fill="#FFF6D6"/>
+  <circle cx="87" cy="25" r="18" fill="#1E1E1E"/><ellipse cx="85" cy="26.5" rx="12" ry="13" fill="#FFF6D6"/>
+  <ellipse cx="60" cy="68" rx="35" ry="33" fill="#E8893B" stroke="#4A2A12" stroke-width="2"/>
+  <path d="M38 88 C44 100,76 100,82 88 C76 92,44 92,38 88 Z" fill="#FFF5DA"/>
+  <ellipse cx="60" cy="90" rx="21" ry="10" fill="#FFF5DA"/>
+  <ellipse cx="47" cy="101" rx="7" ry="4" fill="#D9772E" stroke="#4A2A12" stroke-width="1.5"/>
+  <ellipse cx="73" cy="101" rx="7" ry="4" fill="#D9772E" stroke="#4A2A12" stroke-width="1.5"/>
+  <circle cx="35" cy="72" r="7.5" fill="#E5413B"/><circle cx="85" cy="72" r="7.5" fill="#E5413B"/>
+  <g stroke="#1E1E1E" stroke-width="2" stroke-linecap="round">
+    <path d="M30 70 L6 60"/><path d="M14 58 L18 68 M20 60 L24 70 M9 61 L11 66"/>
+    <path d="M90 70 L114 60"/><path d="M106 58 L102 68 M100 60 L96 70 M111 61 L109 66"/>
+  </g>
+  ${face}
 </svg>`;
+// 기본(로딩): 자신 있는 얼굴
+const FACE_OK=`<ellipse cx="48" cy="62" rx="4.2" ry="6" fill="#1E1E1E"/><ellipse cx="72" cy="62" rx="4.2" ry="6" fill="#1E1E1E"/>
+  <circle cx="49.5" cy="59.5" r="1.6" fill="#fff"/><circle cx="73.5" cy="59.5" r="1.6" fill="#fff"/>
+  <path d="M42 54 L53 57 M78 54 L67 57" stroke="#4A2A12" stroke-width="2" stroke-linecap="round"/>
+  <path d="M55 73 Q60 79 65 73 Z" fill="#8B2A2A"/><rect x="56.5" y="73" width="3" height="3" fill="#fff"/><rect x="60.5" y="73" width="3" height="3" fill="#fff"/>`;
+// 손해(비추천): 깜짝 놀란 얼굴
+const FACE_SHOCK=`<circle cx="48" cy="62" r="5.2" fill="#fff" stroke="#1E1E1E" stroke-width="2"/><circle cx="72" cy="62" r="5.2" fill="#fff" stroke="#1E1E1E" stroke-width="2"/>
+  <circle cx="48" cy="62" r="1.5" fill="#1E1E1E"/><circle cx="72" cy="62" r="1.5" fill="#1E1E1E"/>
+  <ellipse cx="60" cy="77" rx="5.5" ry="7" fill="#6B1F1F"/><ellipse cx="60" cy="80.5" rx="3.5" ry="2.5" fill="#E76A6A"/>
+  <rect x="58" y="70.5" width="4" height="3" rx="1" fill="#fff"/>
+  <path d="M96 40 C99 46,99 50,96 52 C93 50,93 46,96 40 Z" fill="#8FD3FF"/>`;
+const LOADER_SVG=dd(FACE_OK);
+const SHOCK_SVG=dd(FACE_SHOCK);
 const loadingHtml=sub=>`<div class="loading">${LOADER_SVG}<b>로딩중<i>.</i><i>.</i><i>.</i></b><span>${sub}</span></div>`;
 
 /* ---------- 스크린샷 자동 채우기 ---------- */
